@@ -11,12 +11,15 @@
             <tr>
                 <th>Node ID</th>
                 <th>Connected?</th>
-                <th>Brows files</th>
+                <th>Browse files</th>
+                <th>Edit</th>
             </tr>
             <% nodes.forEach(node => { %>
                 <tr>
                     <td><%=node.id%></td>
                     <td><%=node.connected%></td>
+                    <td><button id="button" onclick="window.location.href = '/<%=node.id%>'">Files</button></td>
+                    <td><button id="button" onclick="window.location.href = '/edit/<%=node.id%>'">Edit</button></td>
                 </tr>
             <% }); %>
             <tr>

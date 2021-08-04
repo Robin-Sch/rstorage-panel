@@ -28,6 +28,52 @@ const add = async () => {
 		});
 }
 
+const edit = async (id) => {
+	const ip = document.getElementById('ip').value;
+	const port = document.getElementById('port').value;
+	const publickey = document.getElementById('publickey').value;
+
+	const valid = validate(ip, port, publickey);
+	if (!valid.success) return alert(valid.message);
+
+	const body = {
+		ip,
+		port,
+		publickey
+	};
+
+	fetch(`/edit/${id}`, {
+		method: 'POST',
+		body: JSON.stringify(body),
+		headers: { 'Content-Type': 'application/json' },
+	}).then(res => res.json())
+		.then(json => {
+			if (!json.success) {
+				return error(true, json.message)
+			} else {
+				return window.location.href = '/';
+			}
+		}).catch(() => {
+			return error(true, 'There are problems connecting to the server!');
+		});
+}
+
+const deleten = async (id) => {
+	fetch(`/delete/${id}`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+	}).then(res => res.json())
+		.then(json => {
+			if (!json.success) {
+				return error(true, json.message)
+			} else {
+				return window.location.href = '/';
+			}
+		}).catch(() => {
+			return error(true, 'There are problems connecting to the server!');
+		});
+}
+
 const validate = (ip, port, publickey) => {
 	if (!ip) {
 		return { success: false, message: 'Missing the ip!' };

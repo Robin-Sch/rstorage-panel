@@ -63,15 +63,62 @@ app
 	.use(express.static(join(__dirname, 'public')))
 	.set('views', join(__dirname, 'views'))
 	.set('view engine', 'ejs')
+	.get('/login', async (req, res) => res.render('login'))
 	.get('/', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
 		if (nodes == null) await fetchNodes();
 
-		return res.render('index', {
-			nodes,
-		});
+		return res.render('index', { nodes, });
 	})
-	.get('/login', async (req, res) => res.render('login'))
+	.get('/edit/:id', async (req, res) => {
+		if (!req.session.loggedin) return res.redirect('/login');
+
+		const node = await NodeModel.findById(req.params.id);
+		if (!node) return res.send('No node with that ID found!');
+
+		const details = {
+			id: node._id,
+			ip: node.ip,
+			port: node.port,
+			publickey: node.publickey,
+		}
+
+		return res.render('edit', { details, });
+	})
+	.post('/edit/:id', async (req, res) => {
+		if (!req.session.loggedin) return res.redirect('/login');
+
+		const {
+			ip,
+			port,
+			publickey,
+		} = req.body;
+
+		if (!ip || !port || !publickey) return res.json({ message: 'Missing the details!', success: false });
+
+		const node = await NodeModel.findById(req.params.id);
+		if (!node) return res.json({ message: 'No node with that ID found!', success: false });
+
+		node.ip = ip;
+		node.port = port;
+		node.publickey = publickey;
+
+		await node.save();
+		await fetchNodes();
+
+		return res.json({ message: 'Node changed!', success: true });
+	})
+	.post('/delete/:id', async (req, res) => {
+		if (!req.session.loggedin) return res.redirect('/login');
+
+		const node = await NodeModel.findById(req.params.id);
+		if (!node) return res.json({ message: 'No node with that ID found!', success: false });
+
+		await NodeModel.deleteOne({ _id: req.params.id });
+		await fetchNodes();
+
+		return res.json({ message: 'Node deleted!', success: true });
+	})
 	.post('/login', async (req, res) => {
 		const {
 			email,
@@ -118,13 +165,14 @@ app
 	})
 	.post('/createNode', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
-		if (!ip || !port || !publickey) return res.json({ message: 'Missing the details!', success: false });
 
 		const {
 			ip,
 			port,
 			publickey,
 		} = req.body;
+
+		if (!ip || !port || !publickey) return res.json({ message: 'Missing the details!', success: false });
 
 		const status = await connectToNode(ip, port, publickey);
 		if (status.success == false) return res.json(status);
@@ -136,8 +184,8 @@ app
 			publickey,
 		});
 
-		node.save().then(() => {
-			fetchNodes();
+		node.save().then(async () => {
+			await fetchNodes();
 			return res.json({ message: 'Connected', success: true });
 		}).catch(() => {
 			return res.json({ message: 'There are problems connecting to the node, please try again!', success: false });
