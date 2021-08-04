@@ -1,0 +1,9 @@
+<html>
+    <body>
+        <% if (authenticated) { %>
+            <p>Hello <%=username%></p>
+        <% } else { %>
+            <a href="/login">login</a>
+        <% } %>
+    </body>
+</html>
