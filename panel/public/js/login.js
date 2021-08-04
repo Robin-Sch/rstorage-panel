@@ -21,7 +21,7 @@ const login = async () => {
 			} else {
 				return window.location.href = '/';
 			}
-		}).catch((e) => {
+		}).catch(() => {
 			return error(true, 'There are problems connecting to the server!');
 		});
 }

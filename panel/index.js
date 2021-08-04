@@ -6,17 +6,35 @@ const session = require('express-session');
 const { connect, Types } = require('mongoose');
 const passport = require('passport');
 const { join } = require('path');
+const { readFileSync, writeFileSync, existsSync } = require('fs');
+const fetch = require('node-fetch')
 
-const UserModel = require('./mongodb/UserModel.js');
-
-const app = express();
+const { generateKeys, unpack, pack } = require('./crypt.js');
 
 const {
 	MONGODB,
-	PORT
+	PANEL_PORT,
 } = process.env;
 
-const port = PORT || 3000;
+const port = PANEL_PORT || 3000;
+
+let SERVER_PRIVATE_KEY = existsSync(join(__dirname, 'rsa_key')) ? readFileSync(join(__dirname, 'rsa_key'), 'utf8') : null;
+let SERVER_PUBLIC_KEY = existsSync(join(__dirname, 'rsa_key.pub')) ? readFileSync(join(__dirname, 'rsa_key.pub'), 'utf8') : null;
+
+if (!SERVER_PRIVATE_KEY || !SERVER_PUBLIC_KEY) {
+	const keys = generateKeys();
+
+	SERVER_PRIVATE_KEY = keys.private;
+	SERVER_PUBLIC_KEY = keys.public;
+
+	writeFileSync(join(__dirname, 'rsa_key'), SERVER_PRIVATE_KEY);
+	writeFileSync(join(__dirname, 'rsa_key.pub'), SERVER_PUBLIC_KEY);
+}
+
+const UserModel = require('./mongodb/UserModel.js');
+const NodeModel = require('./mongodb/NodeModel.js');
+
+const app = express();
 
 connect(MONGODB, {
 	useNewUrlParser: true,
@@ -32,9 +50,11 @@ passport.deserializeUser(function(user, done) {
 	done(null, user);
 });
 
+let nodes = null;
+
 app
-	.use(express.json())
-	.use(express.urlencoded({ extended: true }))
+	.use(express.json({ limit: "1000mb" }))
+	.use(express.urlencoded({ limit: "1000mb", extended: true }))
 	.use(session({
 		secret: 'secret', 
 		resave: true, 
@@ -44,14 +64,14 @@ app
 	.set('views', join(__dirname, 'views'))
 	.set('view engine', 'ejs')
 	.get('/', async (req, res) => {
-		res.render('index', {
-			authenticated: req.session.loggedin,
-			username: req.session.username || null
+		if (!req.session.loggedin) return res.redirect('/login');
+		if (nodes == null) await fetchNodes();
+
+		return res.render('index', {
+			nodes,
 		});
 	})
-	.get('/login', async (req, res) => {
-		return res.render('login');
-	})
+	.get('/login', async (req, res) => res.render('login'))
 	.post('/login', async (req, res) => {
 		const {
 			email,
@@ -67,9 +87,6 @@ app
 		} else {
 			return res.json({ message: 'Incorrect Email and/or Password!', success: false });
 		}
-	})
-	.get('/register', async (req, res) => {
-		return res.render('register');
 	})
 	.post('/register', async (req, res) => {
 		const {
@@ -96,10 +113,79 @@ app
 			req.session.username = username;
 			return res.json({ message: 'Correct', success: true });
 		}).catch(() => {
-			return res.redirect('/register');
+			return res.redirect('/login');
+		});
+	})
+	.post('/createNode', async (req, res) => {
+		if (!req.session.loggedin) return res.redirect('/login');
+		if (!ip || !port || !publickey) return res.json({ message: 'Missing the details!', success: false });
+
+		const {
+			ip,
+			port,
+			publickey,
+		} = req.body;
+
+		const status = await connectToNode(ip, port, publickey);
+		if (status.success == false) return res.json(status);
+
+		const node = new NodeModel({
+			_id: new Types.ObjectId(),
+			ip,
+			port,
+			publickey,
+		});
+
+		node.save().then(() => {
+			fetchNodes();
+			return res.json({ message: 'Connected', success: true });
+		}).catch(() => {
+			return res.json({ message: 'There are problems connecting to the node, please try again!', success: false });
 		});
 	})
 	.listen(port, (err) => {
 		if (err) console.log(err);
 		else console.log(`Server online on port ${port}`);
 	});
+
+
+const fetchNodes = async () => {
+	const all = await NodeModel.find();
+	nodes = [];
+
+	for (let i = 0; i < all.length; i++) {
+		const node = all[i];
+		const status = await connectToNode(node.ip, node.port, node.publickey);
+		nodes.push({
+			id: node._id,
+			connected: status.success
+		});
+
+		if (i == all.length - 1) {
+			return;
+		}
+	}
+}
+
+const connectToNode = (ip, port, publickey) => {
+	return new Promise((resolve, reject) => {
+		const body = {
+			publickey: SERVER_PUBLIC_KEY,
+		}
+		const encryptedbody = pack(publickey, body);
+	
+		fetch(`http://${ip}:${port}/init`, {
+			method: 'POST',
+			body: JSON.stringify(encryptedbody),
+			headers: { 'Content-Type': 'application/json' },
+		}).then(res2 => res2.json())
+			.then(encryptedjson => {
+				const json = JSON.parse(unpack(encryptedjson));
+				
+				if (!json.success) return resolve({ message: json.message, success: false });
+				else resolve({ message: 'Connected', success: true });
+			}).catch(() => {
+				return resolve({ message: 'There are problems connecting to the node, please make sure the IP and port are correct!', success: false });
+			});
+	})
+}

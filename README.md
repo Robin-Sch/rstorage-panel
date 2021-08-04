@@ -23,20 +23,19 @@ Please make sure to update tests as appropriate.
 
 ## What has to be done?
 
-#### Panel
 * login system
 	* [x] basic login system
 	* [ ] email verification + password reset
 * connecting node to panel
-	* [ ] generating random key
-
-#### Node
-* connecting node to panel
-	* [ ] connecting using random key
+	* [x] generating key pair on both panel and node
+	* [x] connect using the node's public key
+	* [ ] editing a node's details
+	* [ ] deleting a node's details
 * storing files
 	* [ ] saving files
+	* [ ] browsing files
 	* [ ] encrypting files
-	* [ ] spread file contents over nodes?
+	* [ ] spread file contents over all nodes?
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
