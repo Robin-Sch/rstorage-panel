@@ -20,6 +20,10 @@ Run `npm run start-panel` to start the RStorage panel.
 
 Run `npm run start-node` to start a node.
 
+Go to your node (`localhost:3001` by default) and copy the public key.
+
+Go to your panel (`localhost:3000` by default), login, and paste the public key (and change the ip/port if you have changed that).
+
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
@@ -38,7 +42,7 @@ Please make sure to update tests as appropriate.
 * storing files
 	* browsing files
 		* [x] viewing files
-		* [ ] uploading files
+		* [x] uploading files
 		* [ ] deleting files
 	* [ ] encrypting files
 	* [ ] spread file contents over all nodes?

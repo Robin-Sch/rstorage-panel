@@ -7,6 +7,11 @@
 		<script src="/js/main.js"></script>
 	</head>
     <body>
+        <form method="POST" action="/files/<%=node%>/upload" enctype="multipart/form-data">
+            <h3>Upload</h3>
+            <input type="file" name="upload" />
+            <input type="submit" />
+        </form>
         <table>
             <tr>
                 <th>Name</th>

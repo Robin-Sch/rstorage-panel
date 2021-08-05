@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const { compare, hash } = require('bcrypt');
 const express = require('express');
+const fileUpload = require('express-fileupload');
 const session = require('express-session');
 const { connect, Types } = require('mongoose');
 const passport = require('passport');
@@ -56,6 +57,7 @@ passport.deserializeUser(function(user, done) {
 app
 	.use(express.json({ limit: '1000mb' }))
 	.use(express.urlencoded({ limit: '1000mb', extended: true }))
+	.use(fileUpload())
 	.use(session({
 		secret: 'secret',
 		resave: true,
@@ -162,14 +164,11 @@ const connectToNode = async (ip, port, publickey) => {
 			headers: { 'Content-Type': 'application/json' },
 		});
 		const encryptedjson = await res.json();
-
+		if (!encryptedjson.encrypted && !encryptedjson.success) return res.json({ message: encryptedjson.message, success: false });
 		const json = JSON.parse(unpack(encryptedjson));
 
-		if (!json.success) {
-			return { message: json.message, success: false };
-		} else {
-			return { message: 'Connected!', success: true };
-		}
+		if (!json.success) return { message: json.message, success: false };
+		else return { message: 'Connected!', success: true };
 	} catch (e) {
 		return { message: 'There are problems connecting to the node, please make sure the IP and port are correct!', success: false };
 	}

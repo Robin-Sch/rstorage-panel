@@ -107,11 +107,8 @@ app
 		for (let i = 0; i < everything.length; i++) {
 			const current = everything[i];
 
-			if (statSync(`${dir}/${current}`).isDirectory()) {
-				directories.push(current);
-			} else {
-				files.push(current);
-			}
+			if (statSync(`${dir}/${current}`).isDirectory()) directories.push(current);
+			else files.push(current);
 
 			if (i == everything.length - 1) {
 				const json = {
@@ -124,6 +121,31 @@ app
 				return res.json(encryptedjson);
 			}
 		}
+	})
+	.post('/upload', async (req, res) => {
+		if (!req.body || !req.body.encrypted || !req.body.key) return res.json({ message: 'Missing the message!', success: false });
+		if (!SERVER_PUBLIC_KEY) return res.json({ message: 'Please visit the panel and try again (node is not (yet) connected)!', success: false, reconnect: true });
+
+		const encryptedbody = req.body;
+		const body = JSON.parse(unpack(encryptedbody));
+
+		if (!body.file) return res.json({ message: 'No file selected!', success: false });
+
+		const dir = join(__dirname, 'files', body.path);
+		const file = JSON.parse(body.file);
+
+		if (existsSync(`${dir}/${file.name}`)) return res.json({ message: 'File already exists!', success: false });
+
+		await writeFileSync(`${dir}/${file.name}`, Buffer.from(file.data.data), 'binary');
+
+		const json = {
+			message: 'File saved',
+			success: true,
+		};
+
+		const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
+		return res.json(encryptedjson);
+
 	})
 	.listen(port, (err) => {
 		if (err) console.log(err);

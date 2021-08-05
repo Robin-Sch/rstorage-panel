@@ -20,11 +20,8 @@ const nodeCreate = async () => {
 		headers: { 'Content-Type': 'application/json' },
 	}).then(res => res.json())
 		.then(json => {
-			if (!json.success) {
-				return error(true, json.message);
-			} else {
-				return window.location.href = '/';
-			}
+			if (!json.success) return error(true, json.message);
+			else return window.location.href = '/';
 		}).catch(() => {
 			return error(true, 'There are problems connecting to the server!');
 		});
@@ -50,11 +47,8 @@ const nodeEdit = async (id) => {
 		headers: { 'Content-Type': 'application/json' },
 	}).then(res => res.json())
 		.then(json => {
-			if (!json.success) {
-				return error(true, json.message);
-			} else {
-				return window.location.href = '/';
-			}
+			if (!json.success) return error(true, json.message);
+			else return window.location.href = '/';
 		}).catch(() => {
 			return error(true, 'There are problems connecting to the server!');
 		});
@@ -66,11 +60,8 @@ const nodeDelete = async (id) => {
 		headers: { 'Content-Type': 'application/json' },
 	}).then(res => res.json())
 		.then(json => {
-			if (!json.success) {
-				return error(true, json.message);
-			} else {
-				return window.location.href = '/';
-			}
+			if (!json.success) return error(true, json.message);
+			else return window.location.href = '/';
 		}).catch(() => {
 			return error(true, 'There are problems connecting to the server!');
 		});
@@ -89,9 +80,6 @@ const validate = (ip, port, publickey) => {
 };
 
 const error = (errorBool, msg) => {
-	if (errorBool) {
-		document.getElementById('response').innerHTML = msg;
-	} else {
-		document.getElementById('response').innerHTML = '';
-	}
+	if (errorBool) document.getElementById('response').innerHTML = msg;
+	else document.getElementById('response').innerHTML = '';
 };

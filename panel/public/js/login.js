@@ -18,11 +18,8 @@ const login = async () => {
 		headers: { 'Content-Type': 'application/json' },
 	}).then(res => res.json())
 		.then(json => {
-			if (!json.success) {
-				return error(true, json.message);
-			} else {
-				return window.location.href = '/';
-			}
+			if (!json.success) return error(true, json.message);
+			else return window.location.href = '/';
 		}).catch(() => {
 			return error(true, 'There are problems connecting to the server!');
 		});
@@ -47,11 +44,8 @@ const register = async () => {
 		headers: { 'Content-Type': 'application/json' },
 	}).then(res => res.json())
 		.then(json => {
-			if (!json.success) {
-				return error(true, json.message);
-			} else {
-				return window.location.href = '/';
-			}
+			if (!json.success) return error(true, json.message);
+			else return window.location.href = '/';
 		}).catch(() => {
 			return error(true, 'There are problems connecting to the server!');
 		});
@@ -77,9 +71,6 @@ const change = (block) => {
 };
 
 const error = (errorBool, msg) => {
-	if (errorBool) {
-		document.getElementById('response').innerHTML = msg;
-	} else {
-		document.getElementById('response').innerHTML = '';
-	}
+	if (errorBool) document.getElementById('response').innerHTML = msg;
+	else document.getElementById('response').innerHTML = '';
 };
