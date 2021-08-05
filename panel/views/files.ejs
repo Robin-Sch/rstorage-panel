@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>RStorage panel</title>
+		<link rel="stylesheet" href="/css/index.css">
+		<script src="/js/main.js"></script>
+	</head>
+    <body>
+        <table>
+            <tr>
+                <th>Name</th>
+            </tr>
+            <%directories.forEach(directory => {%>
+                <tr>
+                    <td><a href="<%=directory%>"><%=directory%></a></td>
+                </tr>
+            <%})%>
+            <%files.forEach(file => { %>
+                <tr>
+                    <td><%=file%></td>
+                </tr>
+            <% }); %>
+        </table>
+
+        <p id="response" style="color: red"></p>
+    </body>
+</html>

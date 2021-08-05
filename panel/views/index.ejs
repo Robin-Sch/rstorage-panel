@@ -18,15 +18,15 @@
                 <tr>
                     <td><%=node.id%></td>
                     <td><%=node.connected%></td>
-                    <td><button id="button" onclick="window.location.href = '/<%=node.id%>'">Files</button></td>
-                    <td><button id="button" onclick="window.location.href = '/edit/<%=node.id%>'">Edit</button></td>
+                    <td><button id="button" onclick="window.location.href = '/files/<%=node.id%>/view/.'">Files</button></td>
+                    <td><button id="button" onclick="window.location.href = '/nodes/<%=node.id%>/edit'">Edit</button></td>
                 </tr>
             <% }); %>
             <tr>
                 <th><input type="text" id="ip" name="ip" placeholder="ip" value="127.0.0.1" required></th>
                 <th><input type="number" id="port" name="port" placeholder="port" value="3001" required></th>
                 <th><textarea type="test" id="publickey" name="publickey" placeholder="publickey" required></textarea></th>
-                <th><button id="button" onclick="add();">Add</button></th>
+                <th><button id="button" onclick="nodeCreate();">Add</button></th>
             </tr>
         </table>
 

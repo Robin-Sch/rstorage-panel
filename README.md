@@ -4,6 +4,8 @@ RStorage is an encrypted cloud file storage.
 
 You have one panel, which is like the "master", and then you can have multiple nodes (or one if you want) which is where the files are stored.
 
+Note: RStorage isn't done yet, and won't function properly. You could help by looking at the what has to be done section down below and creating a PR/issue.
+
 ## Installation
 
 Install [nodejs](https://nodejs.org/en/download/).
@@ -34,8 +36,10 @@ Please make sure to update tests as appropriate.
 	* [x] editing a node's details
 	* [x] deleting a node's details
 * storing files
-	* [ ] saving files
-	* [ ] browsing files
+	* browsing files
+		* [x] viewing files
+		* [ ] uploading files
+		* [ ] deleting files
 	* [ ] encrypting files
 	* [ ] spread file contents over all nodes?
 

@@ -7,16 +7,19 @@ const { connect, Types } = require('mongoose');
 const passport = require('passport');
 const { join } = require('path');
 const { readFileSync, writeFileSync, existsSync } = require('fs');
-const fetch = require('node-fetch')
+const fetch = require('node-fetch');
 
 const { generateKeys, unpack, pack } = require('./crypt.js');
+
+const nodesRouter = require('./routers/nodes.js');
+const filesRouter = require('./routers/files.js');
 
 const {
 	MONGODB,
 	PANEL_PORT,
 } = process.env;
 
-const port = PANEL_PORT || 3000;
+const panel_port = PANEL_PORT || 3000;
 
 let SERVER_PRIVATE_KEY = existsSync(join(__dirname, 'rsa_key')) ? readFileSync(join(__dirname, 'rsa_key'), 'utf8') : null;
 let SERVER_PUBLIC_KEY = existsSync(join(__dirname, 'rsa_key.pub')) ? readFileSync(join(__dirname, 'rsa_key.pub'), 'utf8') : null;
@@ -50,79 +53,30 @@ passport.deserializeUser(function(user, done) {
 	done(null, user);
 });
 
-let nodes = null;
-
 app
-	.use(express.json({ limit: "1000mb" }))
-	.use(express.urlencoded({ limit: "1000mb", extended: true }))
+	.use(express.json({ limit: '1000mb' }))
+	.use(express.urlencoded({ limit: '1000mb', extended: true }))
 	.use(session({
-		secret: 'secret', 
-		resave: true, 
-		saveUninitialized: true 
+		secret: 'secret',
+		resave: true,
+		saveUninitialized: true,
 	}))
 	.use(express.static(join(__dirname, 'public')))
 	.set('views', join(__dirname, 'views'))
 	.set('view engine', 'ejs')
+	.use('/nodes', nodesRouter)
+	.use('/files', filesRouter)
 	.get('/login', async (req, res) => res.render('login'))
 	.get('/', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
-		if (nodes == null) await fetchNodes();
+		const nodes = await getNodes();
 
-		return res.render('index', { nodes, });
-	})
-	.get('/edit/:id', async (req, res) => {
-		if (!req.session.loggedin) return res.redirect('/login');
-
-		const node = await NodeModel.findById(req.params.id);
-		if (!node) return res.send('No node with that ID found!');
-
-		const details = {
-			id: node._id,
-			ip: node.ip,
-			port: node.port,
-			publickey: node.publickey,
-		}
-
-		return res.render('edit', { details, });
-	})
-	.post('/edit/:id', async (req, res) => {
-		if (!req.session.loggedin) return res.redirect('/login');
-
-		const {
-			ip,
-			port,
-			publickey,
-		} = req.body;
-
-		if (!ip || !port || !publickey) return res.json({ message: 'Missing the details!', success: false });
-
-		const node = await NodeModel.findById(req.params.id);
-		if (!node) return res.json({ message: 'No node with that ID found!', success: false });
-
-		node.ip = ip;
-		node.port = port;
-		node.publickey = publickey;
-
-		await node.save();
-		await fetchNodes();
-
-		return res.json({ message: 'Node changed!', success: true });
-	})
-	.post('/delete/:id', async (req, res) => {
-		if (!req.session.loggedin) return res.redirect('/login');
-
-		const node = await NodeModel.findById(req.params.id);
-		if (!node) return res.json({ message: 'No node with that ID found!', success: false });
-
-		await NodeModel.deleteOne({ _id: req.params.id });
-		await fetchNodes();
-
-		return res.json({ message: 'Node deleted!', success: true });
+		return res.render('index', { nodes });
 	})
 	.post('/login', async (req, res) => {
 		const {
 			email,
-			password
+			password,
 		} = req.body;
 		if (!email || !password) return res.send('Please enter Email and Password!');
 		const user = await UserModel.findOne({ email: email });
@@ -139,13 +93,13 @@ app
 		const {
 			email,
 			password,
-			username
+			username,
 		} = req.body;
 		if (!email || !password || !username) return res.send('Please enter Email, Username and Password!');
 		const alreadyRegistered = {
 			email: await UserModel.findOne({ email: email }),
-			username: await UserModel.findOne({ username: username })
-		}
+			username: await UserModel.findOne({ username: username }),
+		};
 		if (alreadyRegistered.email) return res.send('That email is already registered!');
 		if (alreadyRegistered.username) return res.send('That username is already registered!');
 		const hashedPassword = await hash(password, 10);
@@ -163,7 +117,7 @@ app
 			return res.redirect('/login');
 		});
 	})
-	.post('/createNode', async (req, res) => {
+	.post('/nodes/create', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
 
 		const {
@@ -185,55 +139,59 @@ app
 		});
 
 		node.save().then(async () => {
-			await fetchNodes();
-			return res.json({ message: 'Connected', success: true });
+			return res.json({ message: 'Connected!', success: true });
 		}).catch(() => {
 			return res.json({ message: 'There are problems connecting to the node, please try again!', success: false });
 		});
 	})
-	.listen(port, (err) => {
+	.listen(panel_port, (err) => {
 		if (err) console.log(err);
-		else console.log(`Server online on port ${port}`);
+		else console.log(`Server online on port ${panel_port}`);
 	});
 
+const connectToNode = async (ip, port, publickey) => {
+	try {
+		const body = {
+			publickey: SERVER_PUBLIC_KEY,
+		};
+		const encryptedbody = pack(publickey, body);
 
-const fetchNodes = async () => {
+		const res = await fetch(`http://${ip}:${port}/init`, {
+			method: 'POST',
+			body: JSON.stringify(encryptedbody),
+			headers: { 'Content-Type': 'application/json' },
+		});
+		const encryptedjson = await res.json();
+
+		const json = JSON.parse(unpack(encryptedjson));
+
+		if (!json.success) {
+			return { message: json.message, success: false };
+		} else {
+			return { message: 'Connected!', success: true };
+		}
+	} catch (e) {
+		return { message: 'There are problems connecting to the node, please make sure the IP and port are correct!', success: false };
+	}
+};
+
+const getNodes = async () => {
 	const all = await NodeModel.find();
-	nodes = [];
+	const nodes = [];
+
+	if (all.length == 0) return nodes;
 
 	for (let i = 0; i < all.length; i++) {
 		const node = all[i];
 		const status = await connectToNode(node.ip, node.port, node.publickey);
+
 		nodes.push({
 			id: node._id,
-			connected: status.success
+			connected: status.success,
 		});
 
 		if (i == all.length - 1) {
-			return;
+			return nodes;
 		}
 	}
-}
-
-const connectToNode = (ip, port, publickey) => {
-	return new Promise((resolve, reject) => {
-		const body = {
-			publickey: SERVER_PUBLIC_KEY,
-		}
-		const encryptedbody = pack(publickey, body);
-	
-		fetch(`http://${ip}:${port}/init`, {
-			method: 'POST',
-			body: JSON.stringify(encryptedbody),
-			headers: { 'Content-Type': 'application/json' },
-		}).then(res2 => res2.json())
-			.then(encryptedjson => {
-				const json = JSON.parse(unpack(encryptedjson));
-				
-				if (!json.success) return resolve({ message: json.message, success: false });
-				else resolve({ message: 'Connected', success: true });
-			}).catch(() => {
-				return resolve({ message: 'There are problems connecting to the node, please make sure the IP and port are correct!', success: false });
-			});
-	})
-}
+};

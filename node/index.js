@@ -2,7 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const { join } = require('path');
-const { readFileSync, writeFileSync, existsSync } = require('fs');
+const { readFileSync, writeFileSync, existsSync, readdirSync, statSync } = require('fs');
 
 const { generateKeys, unpack, pack } = require('./crypt.js');
 
@@ -48,15 +48,15 @@ app
 		const encryptedbody = req.body;
 		const body = JSON.parse(unpack(encryptedbody));
 
-		let newPublicServerKey = body.publickey;
+		const newPublicServerKey = body.publickey;
 
 		if (SERVER_PUBLIC_KEY && SERVER_PUBLIC_KEY !== newPublicServerKey) {
 			const json = {
 				message: 'Node is already connected to different panel!',
 				success: false,
-			}
+			};
 
-			const encryptedjson = pack(newPublicServerKey, json)
+			const encryptedjson = pack(newPublicServerKey, json);
 			return res.json(encryptedjson);
 		}
 
@@ -65,10 +65,65 @@ app
 		const json = {
 			message: 'Connected',
 			success: true,
+		};
+
+		const encryptedjson = pack(newPublicServerKey, json);
+		return res.json(encryptedjson);
+	})
+	.post('/files', (req, res) => {
+		if (!req.body || !req.body.encrypted || !req.body.key) return res.json({ message: 'Missing the message!', success: false });
+		if (!SERVER_PUBLIC_KEY) return res.json({ message: 'Please visit the panel and try again (node is not (yet) connected)!', success: false, reconnect: true });
+
+		const encryptedbody = req.body;
+		const body = JSON.parse(unpack(encryptedbody));
+
+		if (!body.path) {
+			const json = {
+				message: 'Missing the path',
+				success: false,
+			};
+			const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
+
+			return res.json(encryptedjson);
 		}
 
-		const encryptedjson = pack(newPublicServerKey, json)
-		return res.json(encryptedjson);
+		const dir = join(__dirname, 'files', body.path);
+
+		const everything = readdirSync(dir);
+
+		if (everything.length == 0) {
+			const json = {
+				message: 'This directory is empty',
+				success: false,
+			};
+			const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
+
+			return res.json(encryptedjson);
+		}
+
+		const files = [];
+		const directories = [];
+
+		for (let i = 0; i < everything.length; i++) {
+			const current = everything[i];
+
+			if (statSync(`${dir}/${current}`).isDirectory()) {
+				directories.push(current);
+			} else {
+				files.push(current);
+			}
+
+			if (i == everything.length - 1) {
+				const json = {
+					files,
+					directories,
+					success: true,
+				};
+
+				const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
+				return res.json(encryptedjson);
+			}
+		}
 	})
 	.listen(port, (err) => {
 		if (err) console.log(err);

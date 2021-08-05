@@ -1,7 +1,9 @@
+/* eslint-disable no-undef */
+/* eslint-disable no-unused-vars */
 const login = async () => {
 	const email = document.getElementById('Lemail').value;
 	const password = document.getElementById('Lpassword').value;
-	
+
 	const valid = validate(email, password);
 	if (!valid.success) return alert(valid.message);
 
@@ -24,7 +26,7 @@ const login = async () => {
 		}).catch(() => {
 			return error(true, 'There are problems connecting to the server!');
 		});
-}
+};
 const register = async () => {
 	const email = document.getElementById('Remail').value;
 	const username = document.getElementById('Rusername').value;
@@ -46,14 +48,14 @@ const register = async () => {
 	}).then(res => res.json())
 		.then(json => {
 			if (!json.success) {
-				return error(true, json.message)
+				return error(true, json.message);
 			} else {
 				return window.location.href = '/';
 			}
 		}).catch(() => {
 			return error(true, 'There are problems connecting to the server!');
 		});
-}
+};
 
 const validate = (username, password, email) => {
 	if (!username) {
@@ -65,14 +67,14 @@ const validate = (username, password, email) => {
 	} else {
 		return { success: true };
 	}
-}
+};
 
 const change = (block) => {
 	error(false);
 	const other = block == 'login' ? 'register' : 'login';
 	document.getElementById(block).style = 'display: block';
 	document.getElementById(other).style = 'display: none';
-}
+};
 
 const error = (errorBool, msg) => {
 	if (errorBool) {
@@ -80,4 +82,4 @@ const error = (errorBool, msg) => {
 	} else {
 		document.getElementById('response').innerHTML = '';
 	}
-}
+};

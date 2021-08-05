@@ -1,4 +1,6 @@
-const add = async () => {
+/* eslint-disable no-undef */
+/* eslint-disable no-unused-vars */
+const nodeCreate = async () => {
 	const ip = document.getElementById('ip').value;
 	const port = document.getElementById('port').value;
 	const publickey = document.getElementById('publickey').value;
@@ -9,26 +11,26 @@ const add = async () => {
 	const body = {
 		ip,
 		port,
-		publickey
+		publickey,
 	};
 
-	fetch('/createNode', {
+	fetch('/nodes/create', {
 		method: 'POST',
 		body: JSON.stringify(body),
 		headers: { 'Content-Type': 'application/json' },
 	}).then(res => res.json())
 		.then(json => {
 			if (!json.success) {
-				return error(true, json.message)
+				return error(true, json.message);
 			} else {
 				return window.location.href = '/';
 			}
 		}).catch(() => {
 			return error(true, 'There are problems connecting to the server!');
 		});
-}
+};
 
-const edit = async (id) => {
+const nodeEdit = async (id) => {
 	const ip = document.getElementById('ip').value;
 	const port = document.getElementById('port').value;
 	const publickey = document.getElementById('publickey').value;
@@ -39,40 +41,40 @@ const edit = async (id) => {
 	const body = {
 		ip,
 		port,
-		publickey
+		publickey,
 	};
 
-	fetch(`/edit/${id}`, {
+	fetch(`/nodes/${id}/edit`, {
 		method: 'POST',
 		body: JSON.stringify(body),
 		headers: { 'Content-Type': 'application/json' },
 	}).then(res => res.json())
 		.then(json => {
 			if (!json.success) {
-				return error(true, json.message)
+				return error(true, json.message);
 			} else {
 				return window.location.href = '/';
 			}
 		}).catch(() => {
 			return error(true, 'There are problems connecting to the server!');
 		});
-}
+};
 
-const deleten = async (id) => {
-	fetch(`/delete/${id}`, {
+const nodeDelete = async (id) => {
+	fetch(`/nodes/${id}/delete`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 	}).then(res => res.json())
 		.then(json => {
 			if (!json.success) {
-				return error(true, json.message)
+				return error(true, json.message);
 			} else {
 				return window.location.href = '/';
 			}
 		}).catch(() => {
 			return error(true, 'There are problems connecting to the server!');
 		});
-}
+};
 
 const validate = (ip, port, publickey) => {
 	if (!ip) {
@@ -84,7 +86,7 @@ const validate = (ip, port, publickey) => {
 	} else {
 		return { success: true };
 	}
-}
+};
 
 const error = (errorBool, msg) => {
 	if (errorBool) {
@@ -92,4 +94,4 @@ const error = (errorBool, msg) => {
 	} else {
 		document.getElementById('response').innerHTML = '';
 	}
-}
+};
