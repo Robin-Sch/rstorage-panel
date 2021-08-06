@@ -9,25 +9,33 @@
 	</head>
     <body>
         <form method="POST" action="/files/<%=node%>/upload" enctype="multipart/form-data">
-            <h3>Upload</h3>
+            <input type="submit" value="upload" />
             <input type="file" name="upload" />
-            <input type="submit" />
         </form>
+
+        <button onclick="dirCreate('<%=node%>');">Create directory</button>
+        <input id="createDirectory" type="text" value="<%=path%>">
+
         <table>
             <tr>
                 <th>Name</th>
             </tr>
+            <% if (path !== '/') { %>
+                <tr>
+                    <td><a onclick="moveoneback();">../</a></td>
+                </tr>
+            <% } %>
             <%directories.forEach(directory => {%>
                 <tr>
-                    <td><a href="<%=directory%>"><%=directory%></a></td>
-                    <th><button id="button" onclick="fileDelete('<%=node%>', '<%=path%>', '<%=directory%>', true);">Delete</button></th>
+                    <td><a href="?path=<%=path%><%=directory%>"><%=directory%></a></td>
+                    <th><button onclick="fileDelete('<%=node%>', '<%=path%>', '<%=directory%>', true);">Delete</button></th>
                 </tr>
             <%})%>
             <%files.forEach(file => { %>
                 <tr>
                     <td><%=file%></td>
-                    <th><button id="button" onclick="fileDelete('<%=node%>', '<%=path%>', '<%=file%>', false);">Delete</button></th>
-                    <th><button id="button" onclick="fileDownload('<%=node%>', '<%=path%>', '<%=file%>');">Download</button></th>
+                    <th><button onclick="fileDelete('<%=node%>', '<%=path%>', '<%=file%>', false);">Delete</button></th>
+                    <th><button onclick="fileDownload('<%=node%>', '<%=path%>', '<%=file%>');">Download</button></th>
                 </tr>
             <% }); %>
         </table>

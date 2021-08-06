@@ -2,9 +2,11 @@ require('dotenv').config();
 
 const express = require('express');
 const { join } = require('path');
-const { readFileSync, writeFileSync, existsSync, readdirSync, statSync, unlinkSync, rmSync } = require('fs');
+const { readFileSync, writeFileSync, existsSync, readdirSync, statSync, unlinkSync, rmSync, mkdirSync } = require('fs');
 
 const { generateKeys, unpack, pack } = require('./crypt.js');
+
+const { NOT_ENCRYPTED_REQUEST, ALREADY_CONNECTED_TO_PANEL, NOT_CONNECTED_TO_PANEL, NO_SUCH_FILE_OR_DIR, ALREADY_SUCH_FILE_OR_DIR, INVALID_BODY, SUCCESS } = require('../responses.json');
 
 const {
 	NODE_PORT,
@@ -35,15 +37,15 @@ app
 	.set('view engine', 'ejs')
 	.get('/', async (req, res) => {
 		if (!SERVER_PUBLIC_KEY) {
-			res.render('index', {
+			res.status(200).render('index', {
 				publickey: NODE_PUBLIC_KEY,
 			});
 		} else {
-			return res.send('Please use the panel!');
+			return res.status(403).send('Please use the panel!');
 		}
 	})
 	.post('/init', (req, res) => {
-		if (!req.body || !req.body.encrypted || !req.body.key) return res.json({ message: 'Missing the message!', success: false });
+		if (!req.body || !req.body.encrypted || !req.body.key) return res.status(400).json({ message: NOT_ENCRYPTED_REQUEST, success: false });
 
 		const encryptedbody = req.body;
 		const body = JSON.parse(unpack(encryptedbody));
@@ -52,40 +54,40 @@ app
 
 		if (SERVER_PUBLIC_KEY && SERVER_PUBLIC_KEY !== newPublicServerKey) {
 			const json = {
-				message: 'Node is already connected to different panel!',
+				message: ALREADY_CONNECTED_TO_PANEL,
 				success: false,
 			};
 
 			const encryptedjson = pack(newPublicServerKey, json);
-			return res.json(encryptedjson);
+			return res.status(403).json(encryptedjson);
 		}
 
 		SERVER_PUBLIC_KEY = newPublicServerKey;
 		writeFileSync(join(__dirname, 'server_rsa_key.pub'), newPublicServerKey);
 
 		const json = {
-			message: 'Connected',
+			message: SUCCESS,
 			success: true,
 		};
 
 		const encryptedjson = pack(newPublicServerKey, json);
-		return res.json(encryptedjson);
+		return res.status(200).json(encryptedjson);
 	})
-	.post('/files/view', (req, res) => {
-		if (!req.body || !req.body.encrypted || !req.body.key) return res.json({ message: 'Missing the message!', success: false });
-		if (!SERVER_PUBLIC_KEY) return res.json({ message: 'Please visit the panel and try again (node is not (yet) connected)!', success: false, reconnect: true });
+	.post('/files/view', async (req, res) => {
+		if (!req.body || !req.body.encrypted || !req.body.key) return res.status(400).json({ message: NOT_ENCRYPTED_REQUEST, success: false });
+		if (!SERVER_PUBLIC_KEY) return res.status(400).json({ message: NOT_CONNECTED_TO_PANEL, success: false, reconnect: true });
 
 		const encryptedbody = req.body;
 		const body = JSON.parse(unpack(encryptedbody));
 
 		if (!body.path) {
 			const json = {
-				message: 'Missing the path',
+				message: INVALID_BODY,
 				success: false,
 			};
 			const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
 
-			return res.json(encryptedjson);
+			return res.status(400).json(encryptedjson);
 		}
 
 		const dir = join(__dirname, 'files', body.path);
@@ -94,12 +96,13 @@ app
 
 		if (everything.length == 0) {
 			const json = {
-				message: 'This directory is empty',
-				success: false,
+				files: [],
+				directories: [],
+				success: true,
 			};
-			const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
 
-			return res.json(encryptedjson);
+			const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
+			return res.status(200).json(encryptedjson);
 		}
 
 		const files = [];
@@ -119,82 +122,169 @@ app
 				};
 
 				const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
-				return res.json(encryptedjson);
+				return res.status(200).json(encryptedjson);
 			}
 		}
 	})
 	.post('/files/delete', async (req, res) => {
-		if (!req.body || !req.body.encrypted || !req.body.key) return res.json({ message: 'Missing the message!', success: false });
-		if (!SERVER_PUBLIC_KEY) return res.json({ message: 'Please visit the panel and try again (node is not (yet) connected)!', success: false, reconnect: true });
+		if (!req.body || !req.body.encrypted || !req.body.key) return res.status(400).json({ message: NOT_ENCRYPTED_REQUEST, success: false });
+		if (!SERVER_PUBLIC_KEY) return res.status(400).json({ message: NOT_CONNECTED_TO_PANEL, success: false, reconnect: true });
 
 		const encryptedbody = req.body;
 		const body = JSON.parse(unpack(encryptedbody));
 
-		if (!body.file) return res.json({ message: 'No file selected!', success: false });
+		if (!body.file) {
+			const json = {
+				message: INVALID_BODY,
+				success: false,
+			};
+			const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
 
-		const dir = join(__dirname, 'files', body.path || '.');
+			return res.status(400).json(encryptedjson);
+		}
 
-		if (!existsSync(`${dir}/${body.file}`)) return res.json({ message: 'File doesn\'t exists!', success: false });
+		const dir = join(__dirname, 'files', body.path || '/');
+
+		if (!existsSync(`${dir}/${body.file}`)) {
+			const json = {
+				message: NO_SUCH_FILE_OR_DIR,
+				success: false,
+			};
+			const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
+
+			return res.status(400).json(encryptedjson);
+		}
 
 		if(body.isDir) rmSync(`${dir}/${body.file}`, { recursive: true });
-		else await unlinkSync(`${dir}/${body.file}`);
+		else unlinkSync(`${dir}/${body.file}`);
 
 		const json = {
-			message: 'File deleted!',
+			message: SUCCESS,
 			success: true,
 		};
 
 		const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
-		return res.json(encryptedjson);
+		return res.status(200).json(encryptedjson);
 	})
 	.post('/files/upload', async (req, res) => {
-		if (!req.body || !req.body.encrypted || !req.body.key) return res.json({ message: 'Missing the message!', success: false });
-		if (!SERVER_PUBLIC_KEY) return res.json({ message: 'Please visit the panel and try again (node is not (yet) connected)!', success: false, reconnect: true });
+		if (!req.body || !req.body.encrypted || !req.body.key) return res.status(400).json({ message: NOT_ENCRYPTED_REQUEST, success: false });
+		if (!SERVER_PUBLIC_KEY) return res.status(400).json({ message: NOT_CONNECTED_TO_PANEL, success: false, reconnect: true });
 
 		const encryptedbody = req.body;
 		const body = JSON.parse(unpack(encryptedbody));
 
-		if (!body.file) return res.json({ message: 'No file selected!', success: false });
+		if (!body.file) {
+			const json = {
+				message: INVALID_BODY,
+				success: false,
+			};
+			const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
 
-		const dir = join(__dirname, 'files', body.path || '.');
+			return res.status(400).json(encryptedjson);
+		}
+
+		const dir = join(__dirname, 'files', body.path || '/');
 		const file = JSON.parse(body.file);
 
-		if (existsSync(`${dir}/${file.name}`)) return res.json({ message: 'File already exists!', success: false });
+		if (existsSync(`${dir}/${file.name}`)) {
+			const json = {
+				message: ALREADY_SUCH_FILE_OR_DIR,
+				success: false,
+			};
+			const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
 
-		await writeFileSync(`${dir}/${file.name}`, Buffer.from(file.data.data), 'binary');
+			return res.status(400).json(encryptedjson);
+		}
+
+		writeFileSync(`${dir}/${file.name}`, Buffer.from(file.data.data), 'binary');
 
 		const json = {
-			message: 'File saved!',
+			message: SUCCESS,
 			success: true,
 		};
 
 		const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
-		return res.json(encryptedjson);
+		return res.status(200).json(encryptedjson);
 	})
 	.post('/files/download', async (req, res) => {
-		if (!req.body || !req.body.encrypted || !req.body.key) return res.json({ message: 'Missing the message!', success: false });
-		if (!SERVER_PUBLIC_KEY) return res.json({ message: 'Please visit the panel and try again (node is not (yet) connected)!', success: false, reconnect: true });
+		if (!req.body || !req.body.encrypted || !req.body.key) return res.status(400).json({ message: NOT_ENCRYPTED_REQUEST, success: false });
+		if (!SERVER_PUBLIC_KEY) return res.status(400).json({ message: NOT_CONNECTED_TO_PANEL, success: false, reconnect: true });
 
 		const encryptedbody = req.body;
 		const body = JSON.parse(unpack(encryptedbody));
 
-		if (!body.file) return res.json({ message: 'No file selected!', success: false });
+		if (!body.file) {
+			const json = {
+				message: INVALID_BODY,
+				success: false,
+			};
+			const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
 
-		const dir = join(__dirname, 'files', body.path || '.');
+			return res.status(400).json(encryptedjson);
+		}
 
-		if (!existsSync(`${dir}/${body.file}`)) return res.json({ message: 'File doesn\'t exists!', success: false });
+		const dir = join(__dirname, 'files', body.path || '/');
 
-		const output = await readFileSync(`${dir}/${body.file}`);
+		if (!existsSync(`${dir}/${body.file}`)) {
+			const json = {
+				message: NO_SUCH_FILE_OR_DIR,
+				success: false,
+			};
+			const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
+
+			return res.status(400).json(encryptedjson);
+		}
+
+		const output = readFileSync(`${dir}/${body.file}`);
 
 		const json = {
 			buffer: output,
 			name: body.file,
-			message: 'File downloaded!',
+			message: SUCCESS,
 			success: true,
 		};
 
 		const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
-		return res.json(encryptedjson);
+		return res.status(200).json(encryptedjson);
+	})
+	.post('/files/create', async (req, res) => {
+		if (!req.body || !req.body.encrypted || !req.body.key) return res.status(400).json({ message: NOT_ENCRYPTED_REQUEST, success: false });
+		if (!SERVER_PUBLIC_KEY) return res.status(400).json({ message: NOT_CONNECTED_TO_PANEL, success: false, reconnect: true });
+
+		const encryptedbody = req.body;
+		const body = JSON.parse(unpack(encryptedbody));
+
+		if (!body.name) {
+			const json = {
+				message: INVALID_BODY,
+				success: false,
+			};
+			const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
+
+			return res.status(400).json(encryptedjson);
+		}
+
+		const dir = join(__dirname, 'files', body.name || '/');
+
+		if (existsSync(dir)) {
+			const json = {
+				message: ALREADY_SUCH_FILE_OR_DIR,
+				success: false,
+			};
+			const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
+
+			return res.status(400).json(encryptedjson);
+		}
+
+		mkdirSync(dir);
+
+		const json = {
+			message: SUCCESS,
+			success: true,
+		};
+
+		const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
+		return res.status(200).json(encryptedjson);
 	})
 	.listen(port, (err) => {
 		if (err) console.log(err);

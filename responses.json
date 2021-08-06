@@ -1,0 +1,11 @@
+{
+	"NOT_ENCRYPTED_REQUEST": "Missing the message!",
+	"ALREADY_CONNECTED_TO_PANEL": "The node is already connected to a different panel!",
+	"NOT_CONNECTED_TO_PANEL": "The node is not (yet) connected to a panel!",
+	"NO_SUCH_FILE_OR_DIR": "That file or directory doesn't exists!",
+	"ALREADY_SUCH_FILE_OR_DIR": "That file or directory does already exists!",
+	"INVALID_BODY": "You sent an incomplete or wrong request body (you probably want to try again)!",
+	"INVALID_NODE": "No node with that ID found!",
+	"PROBLEMS_CONNECTING_NODE": "There are problems connecting to the node, please try again!",
+	"SUCCESS": "Success!"
+}

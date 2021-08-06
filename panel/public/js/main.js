@@ -1,4 +1,4 @@
-const nodeCreate = async () => {
+const nodeCreate = () => {
 	const ip = document.getElementById('ip').value;
 	const port = document.getElementById('port').value;
 	const publickey = document.getElementById('publickey').value;
@@ -25,7 +25,7 @@ const nodeCreate = async () => {
 		});
 };
 
-const nodeEdit = async (id) => {
+const nodeEdit = (id) => {
 	const ip = document.getElementById('ip').value;
 	const port = document.getElementById('port').value;
 	const publickey = document.getElementById('publickey').value;
@@ -65,7 +65,7 @@ const nodeDelete = (id) => {
 		});
 };
 
-const fileDelete = async (nodeID, path, file, isDir) => {
+const fileDelete = (nodeID, path, file, isDir) => {
 	const body = {
 		file,
 		path,
@@ -79,13 +79,13 @@ const fileDelete = async (nodeID, path, file, isDir) => {
 	}).then(res => res.json())
 		.then(json => {
 			if (!json.success) return error(true, json.message);
-			else return window.location.href = `/files/${nodeID}/view/${body.path}`;
+			else return window.location.href = `/files/${nodeID}/view${body.path}`;
 		}).catch(() => {
 			return error(true, 'There are problems connecting to the server!');
 		});
 };
 
-const fileDownload = async (nodeID, path, file) => {
+const fileDownload = (nodeID, path, file) => {
 	const body = {
 		file,
 		path,
@@ -98,13 +98,44 @@ const fileDownload = async (nodeID, path, file) => {
 	}).then(res => res.json())
 		.then(json => {
 			if (!json.success) return error(true, json.message);
-
-			return prepareAndDownload(json.name, json.buffer.data)
-		}).catch(e => {
-			console.log(e);
+			else return prepareAndDownload(json.name, json.buffer.data)
+		}).catch(() => {
 			return error(true, 'There are problems connecting to the server!');
 		});
 };
+
+const dirCreate = (nodeID) => {
+	const name = document.getElementById('createDirectory').value || '/';
+
+	const body = {
+		name,
+	};
+
+	fetch(`/files/${nodeID}/create`, {
+		method: 'POST',
+		body: JSON.stringify(body),
+		headers: { 'Content-Type': 'application/json' },
+	}).then(res => res.json())
+		.then(json => {
+			if (!json.success) return error(true, json.message);
+			else return window.location.href = `/files/${nodeID}/view${body.name}`;
+		}).catch(() => {
+			return error(true, 'There are problems connecting to the server!');
+		});
+}
+
+const moveoneback = () => {
+	let newParam = window.location.search.split('path=')[1].split('&')[0].replace(/\/$/, '').split('/').slice(0, -1).join('/');
+	if (newParam.length == 0) newParam = '/'
+	return window.location = window.location.pathname + replaceQueryParam('path', newParam, window.location.search);
+}
+
+const replaceQueryParam = (param, newval, search) => {
+    var regex = new RegExp("([?;&])" + param + "[^&;]*[;&]?");
+    var query = search.replace(regex, "$1").replace(/&$/, '');
+
+    return (query.length > 2 ? query + "&" : "?") + (newval ? param + "=" + newval : '');
+} 
 
 const validate = (ip, port, publickey) => {
 	if (!ip) {

@@ -2,6 +2,8 @@ const { Router } = require('express');
 
 const NodeModel = require('../mongodb/NodeModel.js');
 
+const { INVALID_BODY, INVALID_NODE, SUCCESS } = require('../../responses.json');
+
 const router = Router();
 
 router
@@ -9,7 +11,7 @@ router
 		if (!req.session.loggedin) return res.redirect('/login');
 
 		const node = await NodeModel.findById(req.params.id);
-		if (!node) return res.send('No node with that ID found!');
+		if (!node) return res.status(403).render('error', { error: INVALID_NODE });
 
 		const details = {
 			id: node._id,
@@ -18,7 +20,7 @@ router
 			publickey: node.publickey,
 		};
 
-		return res.render('edit', { details });
+		return res.status(200).render('edit', { details });
 	})
 	.post('/:id/edit', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
@@ -29,10 +31,10 @@ router
 			publickey,
 		} = req.body;
 
-		if (!ip || !port || !publickey) return res.json({ message: 'Missing the details!', success: false });
+		if (!ip || !port || !publickey) return res.status(400).json({ message: INVALID_BODY, success: false });
 
 		const node = await NodeModel.findById(req.params.id);
-		if (!node) return res.json({ message: 'No node with that ID found!', success: false });
+		if (!node) return res.status(403).json({ message: INVALID_NODE, success: false });
 
 		node.ip = ip;
 		node.port = port;
@@ -40,17 +42,17 @@ router
 
 		await node.save();
 
-		return res.json({ message: 'Node changed!', success: true });
+		return res.status(200).json({ message: SUCCESS, success: true });
 	})
 	.post('/:id/delete', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
 
 		const node = await NodeModel.findById(req.params.id);
-		if (!node) return res.json({ message: 'No node with that ID found!', success: false });
+		if (!node) return res.status(403).json({ message: INVALID_NODE, success: false });
 
 		await NodeModel.deleteOne({ _id: req.params.id });
 
-		return res.json({ message: 'Node deleted!', success: true });
+		return res.status(200).json({ message: SUCCESS, success: true });
 	});
 
 module.exports = router;

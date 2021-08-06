@@ -18,7 +18,7 @@
                 <tr>
                     <td><%=node.id%></td>
                     <td><%=node.connected%></td>
-                    <td><button id="button" onclick="window.location.href = '/files/<%=node.id%>/view/.'">Files</button></td>
+                    <td><button id="button" onclick="window.location.href = '/files/<%=node.id%>/view?path=/'">Files</button></td>
                     <td><button id="button" onclick="window.location.href = '/nodes/<%=node.id%>/edit'">Edit</button></td>
                 </tr>
             <% }); %>

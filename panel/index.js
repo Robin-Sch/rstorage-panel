@@ -12,6 +12,8 @@ const fetch = require('node-fetch');
 
 const { generateKeys, unpack, pack } = require('./crypt.js');
 
+const { INVALID_BODY, PROBLEMS_CONNECTING_NODE, SUCCESS } = require('../responses.json');
+
 const nodesRouter = require('./routers/nodes.js');
 const filesRouter = require('./routers/files.js');
 
@@ -86,9 +88,9 @@ app
 		if (await compare(password, user.password)) {
 			req.session.loggedin = true;
 			req.session.username = user.username;
-			return res.json({ message: 'Correct', success: true });
+			return res.status(200).json({ message: 'Correct', success: true });
 		} else {
-			return res.json({ message: 'Incorrect Email and/or Password!', success: false });
+			return res.status(401).json({ message: 'Incorrect Email and/or Password!', success: false });
 		}
 	})
 	.post('/register', async (req, res) => {
@@ -114,9 +116,9 @@ app
 		schema.save().then(() => {
 			req.session.loggedin = true;
 			req.session.username = username;
-			return res.json({ message: 'Correct', success: true });
+			return res.status(200).json({ message: 'Correct', success: true });
 		}).catch(() => {
-			return res.redirect('/login');
+			return res.status(500).redirect('/login');
 		});
 	})
 	.post('/nodes/create', async (req, res) => {
@@ -128,10 +130,10 @@ app
 			publickey,
 		} = req.body;
 
-		if (!ip || !port || !publickey) return res.json({ message: 'Missing the details!', success: false });
+		if (!ip || !port || !publickey) return res.status(400).json({ message: INVALID_BODY, success: false });
 
 		const status = await connectToNode(ip, port, publickey);
-		if (status.success == false) return res.json(status);
+		if (status.success == false) return res.status(400).json(status);
 
 		const node = new NodeModel({
 			_id: new Types.ObjectId(),
@@ -141,9 +143,9 @@ app
 		});
 
 		node.save().then(async () => {
-			return res.json({ message: 'Connected!', success: true });
+			return res.status(200).json({ message: SUCCESS, success: true });
 		}).catch(() => {
-			return res.json({ message: 'There are problems connecting to the node, please try again!', success: false });
+			return res.status(500).json({ message: PROBLEMS_CONNECTING_NODE, success: false });
 		});
 	})
 	.listen(panel_port, (err) => {
@@ -164,13 +166,13 @@ const connectToNode = async (ip, port, publickey) => {
 			headers: { 'Content-Type': 'application/json' },
 		});
 		const encryptedjson = await res.json();
-		if (!encryptedjson.encrypted && !encryptedjson.success) return res.json({ message: encryptedjson.message, success: false });
+		if (!encryptedjson.encrypted && !encryptedjson.success) return { message: encryptedjson.message, success: false };
 		const json = JSON.parse(unpack(encryptedjson));
 
 		if (!json.success) return { message: json.message, success: false };
-		else return { message: 'Connected!', success: true };
+		else return { message: SUCCESS, success: true };
 	} catch (e) {
-		return { message: 'There are problems connecting to the node, please make sure the IP and port are correct!', success: false };
+		return { message: PROBLEMS_CONNECTING_NODE, success: false };
 	}
 };
 
