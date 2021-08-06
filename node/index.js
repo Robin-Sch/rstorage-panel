@@ -14,9 +14,11 @@ const {
 
 const port = NODE_PORT || 3001;
 
-let NODE_PRIVATE_KEY = existsSync(join(__dirname, 'rsa_key')) ? readFileSync(join(__dirname, 'rsa_key'), 'utf8') : null;
-let NODE_PUBLIC_KEY = existsSync(join(__dirname, 'rsa_key.pub')) ? readFileSync(join(__dirname, 'rsa_key.pub'), 'utf8') : null;
-let SERVER_PUBLIC_KEY = existsSync(join(__dirname, 'server_rsa_key.pub')) ? readFileSync(join(__dirname, 'server_rsa_key.pub'), 'utf8') : null;
+if (!existsSync(join(__dirname, 'keys'))) mkdirSync(join(__dirname, 'keys'));
+if (!existsSync(join(__dirname, 'files'))) mkdirSync(join(__dirname, 'files'));
+let NODE_PRIVATE_KEY = existsSync(join(__dirname, 'keys/rsa_key')) ? readFileSync(join(__dirname, 'keys/rsa_key'), 'utf8') : null;
+let NODE_PUBLIC_KEY = existsSync(join(__dirname, 'keys/rsa_key.pub')) ? readFileSync(join(__dirname, 'keys/rsa_key.pub'), 'utf8') : null;
+let SERVER_PUBLIC_KEY = existsSync(join(__dirname, 'keys/server_rsa_key.pub')) ? readFileSync(join(__dirname, 'keys/server_rsa_key.pub'), 'utf8') : null;
 
 if (!NODE_PRIVATE_KEY || !NODE_PUBLIC_KEY) {
 	const keys = generateKeys();
@@ -24,15 +26,15 @@ if (!NODE_PRIVATE_KEY || !NODE_PUBLIC_KEY) {
 	NODE_PRIVATE_KEY = keys.private;
 	NODE_PUBLIC_KEY = keys.public;
 
-	writeFileSync(join(__dirname, 'rsa_key'), NODE_PRIVATE_KEY);
-	writeFileSync(join(__dirname, 'rsa_key.pub'), NODE_PUBLIC_KEY);
+	writeFileSync(join(__dirname, 'keys/rsa_key'), NODE_PRIVATE_KEY);
+	writeFileSync(join(__dirname, 'keys/rsa_key.pub'), NODE_PUBLIC_KEY);
 }
 
 const app = express();
 
 app
-	.use(express.json({ limit: '1000mb' }))
-	.use(express.urlencoded({ limit: '1000mb', extended: true }))
+	.use(express.json({ limit: '100mb' }))
+	.use(express.urlencoded({ limit: '100mb', extended: true }))
 	.set('views', join(__dirname, 'views'))
 	.set('view engine', 'ejs')
 	.get('/', async (req, res) => {
@@ -63,7 +65,7 @@ app
 		}
 
 		SERVER_PUBLIC_KEY = newPublicServerKey;
-		writeFileSync(join(__dirname, 'server_rsa_key.pub'), newPublicServerKey);
+		writeFileSync(join(__dirname, 'keys/server_rsa_key.pub'), newPublicServerKey);
 
 		const json = {
 			message: SUCCESS,
@@ -173,7 +175,7 @@ app
 		const encryptedbody = req.body;
 		const body = JSON.parse(unpack(encryptedbody));
 
-		if (!body.file) {
+		if (!body.name || !body.content) {
 			const json = {
 				message: INVALID_BODY,
 				success: false,
@@ -184,9 +186,8 @@ app
 		}
 
 		const dir = join(__dirname, 'files', body.path || '/');
-		const file = JSON.parse(body.file);
 
-		if (existsSync(`${dir}/${file.name}`)) {
+		if (existsSync(`${dir}/${body.name}`)) {
 			const json = {
 				message: ALREADY_SUCH_FILE_OR_DIR,
 				success: false,
@@ -196,7 +197,7 @@ app
 			return res.status(400).json(encryptedjson);
 		}
 
-		writeFileSync(`${dir}/${file.name}`, Buffer.from(file.data.data), 'binary');
+		writeFileSync(`${dir}/${body.name}`, Buffer.from(body.content.data), 'binary');
 
 		const json = {
 			message: SUCCESS,
@@ -213,7 +214,7 @@ app
 		const encryptedbody = req.body;
 		const body = JSON.parse(unpack(encryptedbody));
 
-		if (!body.file) {
+		if (!body.name) {
 			const json = {
 				message: INVALID_BODY,
 				success: false,
@@ -225,7 +226,7 @@ app
 
 		const dir = join(__dirname, 'files', body.path || '/');
 
-		if (!existsSync(`${dir}/${body.file}`)) {
+		if (!existsSync(`${dir}/${body.name}`)) {
 			const json = {
 				message: NO_SUCH_FILE_OR_DIR,
 				success: false,
@@ -235,15 +236,16 @@ app
 			return res.status(400).json(encryptedjson);
 		}
 
-		const output = readFileSync(`${dir}/${body.file}`);
+		const content = readFileSync(`${dir}/${body.name}`);
 
 		const json = {
-			buffer: output,
-			name: body.file,
+			content,
+			name: body.name,
 			message: SUCCESS,
 			success: true,
 		};
 
+		// TODO: big files fail because of pack using too much memory?
 		const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
 		return res.status(200).json(encryptedjson);
 	})

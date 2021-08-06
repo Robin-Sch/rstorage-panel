@@ -46,7 +46,8 @@ const rsa = {
 		const buffer = Buffer.from(message, 'base64');
 
 		const decrypted = crypto.privateDecrypt({
-			key: readFileSync(join(__dirname, 'rsa_key'), 'utf8'), // process.env.SERVER_PRIVATE_KEY
+			// process.env.SERVER_PRIVATE_KEY
+			key: readFileSync(join(__dirname, 'keys/rsa_key'), 'utf8'),
 			padding: crypto.constants.RSA_PKCS1_PADDING,
 		},
 		buffer,

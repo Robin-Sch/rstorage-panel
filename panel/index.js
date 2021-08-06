@@ -7,7 +7,7 @@ const session = require('express-session');
 const { connect, Types } = require('mongoose');
 const passport = require('passport');
 const { join } = require('path');
-const { readFileSync, writeFileSync, existsSync } = require('fs');
+const { readFileSync, writeFileSync, existsSync, mkdirSync } = require('fs');
 const fetch = require('node-fetch');
 
 const { generateKeys, unpack, pack } = require('./crypt.js');
@@ -24,8 +24,9 @@ const {
 
 const panel_port = PANEL_PORT || 3000;
 
-let SERVER_PRIVATE_KEY = existsSync(join(__dirname, 'rsa_key')) ? readFileSync(join(__dirname, 'rsa_key'), 'utf8') : null;
-let SERVER_PUBLIC_KEY = existsSync(join(__dirname, 'rsa_key.pub')) ? readFileSync(join(__dirname, 'rsa_key.pub'), 'utf8') : null;
+if (!existsSync(join(__dirname, 'keys'))) mkdirSync(join(__dirname, 'keys'));
+let SERVER_PRIVATE_KEY = existsSync(join(__dirname, 'keys/rsa_key')) ? readFileSync(join(__dirname, 'keys/rsa_key'), 'utf8') : null;
+let SERVER_PUBLIC_KEY = existsSync(join(__dirname, 'keys/rsa_key.pub')) ? readFileSync(join(__dirname, 'keys/rsa_key.pub'), 'utf8') : null;
 
 if (!SERVER_PRIVATE_KEY || !SERVER_PUBLIC_KEY) {
 	const keys = generateKeys();
@@ -33,8 +34,8 @@ if (!SERVER_PRIVATE_KEY || !SERVER_PUBLIC_KEY) {
 	SERVER_PRIVATE_KEY = keys.private;
 	SERVER_PUBLIC_KEY = keys.public;
 
-	writeFileSync(join(__dirname, 'rsa_key'), SERVER_PRIVATE_KEY);
-	writeFileSync(join(__dirname, 'rsa_key.pub'), SERVER_PUBLIC_KEY);
+	writeFileSync(join(__dirname, 'keys/rsa_key'), SERVER_PRIVATE_KEY);
+	writeFileSync(join(__dirname, 'keys/rsa_key.pub'), SERVER_PUBLIC_KEY);
 }
 
 const UserModel = require('./mongodb/UserModel.js');
@@ -57,8 +58,8 @@ passport.deserializeUser(function(user, done) {
 });
 
 app
-	.use(express.json({ limit: '1000mb' }))
-	.use(express.urlencoded({ limit: '1000mb', extended: true }))
+	.use(express.json({ limit: '100mb' }))
+	.use(express.urlencoded({ limit: '100mb', extended: true }))
 	.use(fileUpload())
 	.use(session({
 		secret: 'secret',

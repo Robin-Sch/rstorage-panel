@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const aesjs = require('aes-js');
 const NodeRSA = require('node-rsa');
 const randomstring = require('randomstring');
-const { readFileSync } = require('fs');
+const { readFileSync, existsSync, mkdirSync, writeFileSync } = require('fs');
 const { join } = require('path');
 
 const SECURITY_LEVEL = 4096;
@@ -46,7 +46,8 @@ const rsa = {
 		const buffer = Buffer.from(message, 'base64');
 
 		const decrypted = crypto.privateDecrypt({
-			key: readFileSync(join(__dirname, 'rsa_key'), 'utf8'), // process.env.SERVER_PRIVATE_KEY
+			// process.env.SERVER_PRIVATE_KEY
+			key: readFileSync(join(__dirname, 'keys/rsa_key'), 'utf8'),
 			padding: crypto.constants.RSA_PKCS1_PADDING,
 		},
 		buffer,
@@ -82,8 +83,31 @@ const unpack = function(data) {
 	return aes.decrypt(aesKey, new Uint8Array(encryptedData));
 };
 
+if (!existsSync(join(__dirname, 'keys'))) mkdirSync(join(__dirname, 'keys'));
+if (!existsSync(join(__dirname, 'keys/key'))) {
+	const key = crypto.randomBytes(32);
+	writeFileSync(join(__dirname, 'keys/key'), key);
+}
+const key = readFileSync(join(__dirname, 'keys/key'));
+
+
+const encrypt = (buffer) => {
+	const iv = crypto.randomBytes(16);
+	const cipher = crypto.createCipheriv('aes-256-ctr', key, iv);
+	return Buffer.concat([iv, cipher.update(buffer), cipher.final()]);
+};
+
+const decrypt = (buffer) => {
+	const iv = buffer.slice(0, 16);
+	buffer = buffer.slice(16);
+	const decipher = crypto.createDecipheriv('aes-256-ctr', key, iv);
+	return Buffer.concat([decipher.update(buffer), decipher.final()]);
+};
+
 module.exports = {
 	pack,
 	unpack,
 	generateKeys,
+	encrypt,
+	decrypt,
 };

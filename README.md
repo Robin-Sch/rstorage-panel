@@ -4,6 +4,10 @@ RStorage is an encrypted cloud file storage.
 
 You have one panel, which is like the "master", and then you can have multiple nodes (or one if you want) which is where the files are stored.
 
+Uploading/Downloading takes some time, this is because of the encryption and decryption part. It depends on the CPU of your panel server.
+
+You would want to host the panel on a high amount of CPU cores and RAM server (file encryption and decryption happens here), and the node(s) on a server with a big disk.
+
 Note: RStorage isn't done yet, and won't function properly. You could help by looking at the what has to be done section down below and creating a PR/issue.
 
 ## Installation
@@ -33,6 +37,7 @@ Please make sure to update tests as appropriate.
 
 * login system
 	* [x] basic login system
+	* [ ] 2fa
 	* [ ] email verification + password reset
 * connecting node to panel
 	* [x] generating key pair on both panel and node
@@ -47,7 +52,8 @@ Please make sure to update tests as appropriate.
 		* [x] downloading files
 		* [x] creating directories
 	* encrypting files
-		* [ ] encrypting on server
+		* [x] encrypting on server
+		* [ ] big file encryption
 		* [ ] encrypting on client?
 	* [ ] spread file contents over all nodes?
 

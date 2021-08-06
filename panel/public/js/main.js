@@ -85,11 +85,13 @@ const fileDelete = (nodeID, path, file, isDir) => {
 		});
 };
 
-const fileDownload = (nodeID, path, file) => {
+const fileDownload = (nodeID, path, name) => {
 	const body = {
-		file,
+		name,
 		path,
 	};
+
+	alert('File is downloading, please give it some time (max 5 minutes) and DON\'T reload the page!')
 
 	fetch(`/files/${nodeID}/download`, {
 		method: 'POST',
@@ -98,7 +100,7 @@ const fileDownload = (nodeID, path, file) => {
 	}).then(res => res.json())
 		.then(json => {
 			if (!json.success) return error(true, json.message);
-			else return prepareAndDownload(json.name, json.buffer.data)
+			else return prepareAndDownload(json.name, json.content.data)
 		}).catch(() => {
 			return error(true, 'There are problems connecting to the server!');
 		});

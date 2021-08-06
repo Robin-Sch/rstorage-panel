@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const fetch = require('node-fetch');
 
-const { unpack, pack } = require('../crypt.js');
+const { unpack, pack, encrypt, decrypt } = require('../crypt.js');
 const NodeModel = require('../mongodb/NodeModel.js');
 
 const { INVALID_BODY, INVALID_NODE, PROBLEMS_CONNECTING_NODE, SUCCESS } = require('../../responses.json');
@@ -78,10 +78,15 @@ router
 
 		if (!req.files || !req.files.upload) return res.status(400).render('error', { error: INVALID_BODY, success: false });
 
+		const content = encrypt(req.files.upload.data);
+
 		const body = {
-			file: JSON.stringify(req.files.upload),
+			content,
+			name: req.files.upload.name,
 			path: req.body.path || '/',
 		};
+
+		// big files fail because of pack using too much memory?
 		const encryptedbody = pack(node.publickey, body);
 
 		fetch(`http://${node.ip}:${node.port}/files/upload`, {
@@ -105,10 +110,10 @@ router
 		const node = await NodeModel.findById(req.params.id);
 		if (!node) return res.status(403).json({ message: INVALID_NODE, success: false });
 
-		if (!req.body.file) return res.status(400).json({ message: INVALID_BODY, success: false });
+		if (!req.body.name) return res.status(400).json({ message: INVALID_BODY, success: false });
 
 		const body = {
-			file: req.body.file,
+			name: req.body.name,
 			path: req.body.path || '/',
 		};
 		const encryptedbody = pack(node.publickey, body);
@@ -123,7 +128,7 @@ router
 				const json = JSON.parse(unpack(encryptedjson));
 
 				if (!json.success) return res.status(502).json({ message: json.message, success: false });
-				else return res.status(200).json({ buffer: json.buffer, name: json.name, message: SUCCESS, success: true });
+				else return res.status(200).json({ content: decrypt(Buffer.from(json.content.data)), name: json.name, message: SUCCESS, success: true });
 			}).catch(() => {
 				return res.status(500).json({ message: PROBLEMS_CONNECTING_NODE, success: false });
 			});
