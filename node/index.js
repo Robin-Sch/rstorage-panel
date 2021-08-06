@@ -171,6 +171,31 @@ app
 		const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
 		return res.json(encryptedjson);
 	})
+	.post('/files/download', async (req, res) => {
+		if (!req.body || !req.body.encrypted || !req.body.key) return res.json({ message: 'Missing the message!', success: false });
+		if (!SERVER_PUBLIC_KEY) return res.json({ message: 'Please visit the panel and try again (node is not (yet) connected)!', success: false, reconnect: true });
+
+		const encryptedbody = req.body;
+		const body = JSON.parse(unpack(encryptedbody));
+
+		if (!body.file) return res.json({ message: 'No file selected!', success: false });
+
+		const dir = join(__dirname, 'files', body.path || '.');
+
+		if (!existsSync(`${dir}/${body.file}`)) return res.json({ message: 'File doesn\'t exists!', success: false });
+
+		const output = await readFileSync(`${dir}/${body.file}`);
+
+		const json = {
+			buffer: output,
+			name: body.file,
+			message: 'File downloaded!',
+			success: true,
+		};
+
+		const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
+		return res.json(encryptedjson);
+	})
 	.listen(port, (err) => {
 		if (err) console.log(err);
 		else console.log(`Server online on port ${port}`);

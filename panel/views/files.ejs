@@ -4,6 +4,7 @@
 		<meta charset="utf-8">
 		<title>RStorage panel</title>
 		<link rel="stylesheet" href="/css/index.css">
+		<script src="/js/download.min.js"></script>
 		<script src="/js/main.js"></script>
 	</head>
     <body>
@@ -26,6 +27,7 @@
                 <tr>
                     <td><%=file%></td>
                     <th><button id="button" onclick="fileDelete('<%=node%>', '<%=path%>', '<%=file%>', false);">Delete</button></th>
+                    <th><button id="button" onclick="fileDownload('<%=node%>', '<%=path%>', '<%=file%>');">Download</button></th>
                 </tr>
             <% }); %>
         </table>

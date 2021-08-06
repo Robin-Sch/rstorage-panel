@@ -1,4 +1,5 @@
 {
+    "ignorePatterns": ["panel/public/js"],
     "extends": "eslint:recommended",
     "env": {
         "node": true,

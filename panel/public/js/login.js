@@ -1,5 +1,3 @@
-/* eslint-disable no-undef */
-/* eslint-disable no-unused-vars */
 const login = async () => {
 	const email = document.getElementById('Lemail').value;
 	const password = document.getElementById('Lpassword').value;

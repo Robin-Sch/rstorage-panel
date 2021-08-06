@@ -44,7 +44,7 @@ Please make sure to update tests as appropriate.
 		* [x] viewing files
 		* [x] uploading files
 		* [x] deleting files
-		* [ ] downloading files
+		* [x] downloading files
 	* encrypting files
 		* [ ] encrypting on server
 		* [ ] encrypting on client?

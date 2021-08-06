@@ -91,6 +91,35 @@ router
 			}).catch(() => {
 				return res.json({ message: 'There are problems connecting to the node, please make sure the IP and port are correct!', success: false });
 			});
+	})
+	.post('/:id/download', async (req, res) => {
+		if (!req.session.loggedin) return res.redirect('/login');
+
+		const node = await NodeModel.findById(req.params.id);
+		if (!node) return res.json({ message: 'No node with that ID found!', success: false });
+
+		if (!req.body.file) return res.json({ message: 'No file selected!', success: false });
+
+		const body = {
+			file: req.body.file,
+			path: req.body.path || '.',
+		};
+		const encryptedbody = pack(node.publickey, body);
+
+		fetch(`http://${node.ip}:${node.port}/files/download`, {
+			method: 'POST',
+			body: JSON.stringify(encryptedbody),
+			headers: { 'Content-Type': 'application/json' },
+		}).then(res2 => res2.json())
+			.then(encryptedjson => {
+				if (!encryptedjson.encrypted && !encryptedjson.success) return res.json({ message: encryptedjson.message, success: false });
+				const json = JSON.parse(unpack(encryptedjson));
+
+				if (!json.success) return res.json({ message: json.message, success: false });
+				else return res.json({ buffer: json.buffer, name: json.name, message: 'File downloaded!', success: true });
+			}).catch(() => {
+				return res.json({ message: 'There are problems connecting to the node, please make sure the IP and port are correct!', success: false });
+			});
 	});
 
 module.exports = router;
