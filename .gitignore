@@ -3,4 +3,5 @@ package-lock.json
 .env
 rsa_key
 rsa_key.pub
+server_rsa_key.pub
 node/files/*

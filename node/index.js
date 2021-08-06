@@ -2,7 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const { join } = require('path');
-const { readFileSync, writeFileSync, existsSync, readdirSync, statSync } = require('fs');
+const { readFileSync, writeFileSync, existsSync, readdirSync, statSync, unlinkSync, rmSync } = require('fs');
 
 const { generateKeys, unpack, pack } = require('./crypt.js');
 
@@ -14,7 +14,7 @@ const port = NODE_PORT || 3001;
 
 let NODE_PRIVATE_KEY = existsSync(join(__dirname, 'rsa_key')) ? readFileSync(join(__dirname, 'rsa_key'), 'utf8') : null;
 let NODE_PUBLIC_KEY = existsSync(join(__dirname, 'rsa_key.pub')) ? readFileSync(join(__dirname, 'rsa_key.pub'), 'utf8') : null;
-let SERVER_PUBLIC_KEY = null;
+let SERVER_PUBLIC_KEY = existsSync(join(__dirname, 'server_rsa_key.pub')) ? readFileSync(join(__dirname, 'server_rsa_key.pub'), 'utf8') : null;
 
 if (!NODE_PRIVATE_KEY || !NODE_PUBLIC_KEY) {
 	const keys = generateKeys();
@@ -61,6 +61,7 @@ app
 		}
 
 		SERVER_PUBLIC_KEY = newPublicServerKey;
+		writeFileSync(join(__dirname, 'server_rsa_key.pub'), newPublicServerKey);
 
 		const json = {
 			message: 'Connected',
@@ -70,7 +71,7 @@ app
 		const encryptedjson = pack(newPublicServerKey, json);
 		return res.json(encryptedjson);
 	})
-	.post('/files', (req, res) => {
+	.post('/files/view', (req, res) => {
 		if (!req.body || !req.body.encrypted || !req.body.key) return res.json({ message: 'Missing the message!', success: false });
 		if (!SERVER_PUBLIC_KEY) return res.json({ message: 'Please visit the panel and try again (node is not (yet) connected)!', success: false, reconnect: true });
 
@@ -122,7 +123,7 @@ app
 			}
 		}
 	})
-	.post('/upload', async (req, res) => {
+	.post('/files/delete', async (req, res) => {
 		if (!req.body || !req.body.encrypted || !req.body.key) return res.json({ message: 'Missing the message!', success: false });
 		if (!SERVER_PUBLIC_KEY) return res.json({ message: 'Please visit the panel and try again (node is not (yet) connected)!', success: false, reconnect: true });
 
@@ -131,7 +132,31 @@ app
 
 		if (!body.file) return res.json({ message: 'No file selected!', success: false });
 
-		const dir = join(__dirname, 'files', body.path);
+		const dir = join(__dirname, 'files', body.path || '.');
+
+		if (!existsSync(`${dir}/${body.file}`)) return res.json({ message: 'File doesn\'t exists!', success: false });
+
+		if(body.isDir) rmSync(`${dir}/${body.file}`, { recursive: true });
+		else await unlinkSync(`${dir}/${body.file}`);
+
+		const json = {
+			message: 'File deleted!',
+			success: true,
+		};
+
+		const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
+		return res.json(encryptedjson);
+	})
+	.post('/files/upload', async (req, res) => {
+		if (!req.body || !req.body.encrypted || !req.body.key) return res.json({ message: 'Missing the message!', success: false });
+		if (!SERVER_PUBLIC_KEY) return res.json({ message: 'Please visit the panel and try again (node is not (yet) connected)!', success: false, reconnect: true });
+
+		const encryptedbody = req.body;
+		const body = JSON.parse(unpack(encryptedbody));
+
+		if (!body.file) return res.json({ message: 'No file selected!', success: false });
+
+		const dir = join(__dirname, 'files', body.path || '.');
 		const file = JSON.parse(body.file);
 
 		if (existsSync(`${dir}/${file.name}`)) return res.json({ message: 'File already exists!', success: false });
@@ -139,13 +164,12 @@ app
 		await writeFileSync(`${dir}/${file.name}`, Buffer.from(file.data.data), 'binary');
 
 		const json = {
-			message: 'File saved',
+			message: 'File saved!',
 			success: true,
 		};
 
 		const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
 		return res.json(encryptedjson);
-
 	})
 	.listen(port, (err) => {
 		if (err) console.log(err);

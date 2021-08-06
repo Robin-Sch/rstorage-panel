@@ -54,7 +54,7 @@ const nodeEdit = async (id) => {
 		});
 };
 
-const nodeDelete = async (id) => {
+const nodeDelete = (id) => {
 	fetch(`/nodes/${id}/delete`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
@@ -62,6 +62,26 @@ const nodeDelete = async (id) => {
 		.then(json => {
 			if (!json.success) return error(true, json.message);
 			else return window.location.href = '/';
+		}).catch(() => {
+			return error(true, 'There are problems connecting to the server!');
+		});
+};
+
+const fileDelete = async (nodeID, path, file, isDir) => {
+	const body = {
+		file,
+		path,
+		isDir,
+	};
+
+	fetch(`/files/${nodeID}/delete`, {
+		method: 'POST',
+		body: JSON.stringify(body),
+		headers: { 'Content-Type': 'application/json' },
+	}).then(res => res.json())
+		.then(json => {
+			if (!json.success) return error(true, json.message);
+			else return window.location.href = `/files/${nodeID}/view/${body.path}`;
 		}).catch(() => {
 			return error(true, 'There are problems connecting to the server!');
 		});

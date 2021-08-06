@@ -19,11 +19,13 @@
             <%directories.forEach(directory => {%>
                 <tr>
                     <td><a href="<%=directory%>"><%=directory%></a></td>
+                    <th><button id="button" onclick="fileDelete('<%=node%>', '<%=path%>', '<%=directory%>', true);">Delete</button></th>
                 </tr>
             <%})%>
             <%files.forEach(file => { %>
                 <tr>
                     <td><%=file%></td>
+                    <th><button id="button" onclick="fileDelete('<%=node%>', '<%=path%>', '<%=file%>', false);">Delete</button></th>
                 </tr>
             <% }); %>
         </table>

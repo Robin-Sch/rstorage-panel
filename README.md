@@ -40,11 +40,14 @@ Please make sure to update tests as appropriate.
 	* [x] editing a node's details
 	* [x] deleting a node's details
 * storing files
-	* browsing files
+	* browsing files (storing unencrypted)
 		* [x] viewing files
 		* [x] uploading files
-		* [ ] deleting files
-	* [ ] encrypting files
+		* [x] deleting files
+		* [ ] downloading files
+	* encrypting files
+		* [ ] encrypting on server
+		* [ ] encrypting on client?
 	* [ ] spread file contents over all nodes?
 
 ## License
