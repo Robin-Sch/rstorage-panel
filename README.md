@@ -72,6 +72,9 @@ Please make sure to update tests as appropriate.
 * PANEL_MAX_SIZE (Default: 8) (in megabytes)
 	* This is the maximum size (in megabytes) a (decrypted) file part should be. If set to 8, that means if a file is between 8 and 16 mb, there will be 2 file parts (useful for changing if your server has a lot of memory, or if you want to spread the file more) (the lower it is, the more the file will be spread).
 
+* PANEL_FORCE_SPREADING (Default: true)
+	* This will force the spreading of a uploaded file, no matter the size (see option above).
+
 * PANEL_PORT (Default: 3000)
 	* The port the panel is listening on.
 

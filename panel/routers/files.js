@@ -8,7 +8,10 @@ const PartModel = require('../mongodb/PartModel.js');
 
 const { INVALID_BODY, ALREADY_SUCH_FILE_OR_DIR, PROBLEMS_CONNECTING_NODE, SUCCESS } = require('../../responses.json');
 
-const { PANEL_MAX_SIZE } = process.env;
+const { PANEL_MAX_SIZE, PANEL_FORCE_SPREADING } = process.env;
+
+let FORCE_SPREADING = false;
+if (PANEL_FORCE_SPREADING == 'true' || PANEL_FORCE_SPREADING == 'True') FORCE_SPREADING = true;
 
 const router = Router();
 
@@ -80,7 +83,9 @@ router
 		const exists = await PartModel.findOne({ path, name });
 		if (exists) return res.status(400).render('error', { error: ALREADY_SUCH_FILE_OR_DIR, success: false });
 
-		const loops = Math.ceil(req.files.upload.data.length / 1000 / 1000 / PANEL_MAX_SIZE);
+		let loops = Math.ceil(req.files.upload.data.length / 1000 / 1000 / PANEL_MAX_SIZE);
+		if (FORCE_SPREADING && loops < nodes.length) loops = nodes.length;
+
 		const amountPerLoop = Math.floor(req.files.upload.data.length / loops);
 		const remaining = req.files.upload.data.length % loops;
 
