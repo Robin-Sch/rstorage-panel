@@ -11,7 +11,7 @@ const { INVALID_BODY, ALREADY_SUCH_FILE_OR_DIR, PROBLEMS_CONNECTING_NODE, SUCCES
 const { PANEL_MAX_SIZE, PANEL_FORCE_SPREADING } = process.env;
 
 let FORCE_SPREADING = false;
-if (PANEL_FORCE_SPREADING == 'true' || PANEL_FORCE_SPREADING == 'True') FORCE_SPREADING = true;
+if (PANEL_FORCE_SPREADING.toLowerCase() == 'true') FORCE_SPREADING = true;
 
 const router = Router();
 

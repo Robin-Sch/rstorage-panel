@@ -24,7 +24,8 @@
 		"node-rsa": "^1.1.1",
 		"passport": "^0.4.1",
 		"path": "^0.12.7",
-		"randomstring": "^1.2.1"
+		"randomstring": "^1.2.1",
+		"speakeasy": "^2.0.0"
 	},
 	"devDependencies": {
 		"eslint": "^7.32.0"

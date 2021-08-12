@@ -16,13 +16,17 @@ You could help by looking at the what has to be done section down below and crea
 
 Install [nodejs](https://nodejs.org/en/download/) (if not done already previously).
 
-Rename `.env.example` to `.env`, and fill in the secrets. Fill in the envs starting with `PANEL_` if you want to install the panel, and fill in the envs starting with `NODE_` if you want to install a node.
+Rename `.env.example` to `.env`, and fill in the environment variables. Fill in the variables starting with `PANEL_` if you want to install the panel, and fill in the variables starting with `NODE_` if you want to install a node. (To avoid confusion, you could delete the `panel` or `node` folder if you're using the other one).
+
+If this is your first time, temporarily set `PANEL_DISABLE_REGISTER` to `false`, in order to register your account. **AFTER REGISTERING, MAKE SURE TO SET IT BACK TO TRUE AND RESTART THE PANEL!**
 
 Optionally: you can install both if you want, although it's not recommended. For more security host the panel and the node on a separate server. Or even host multiple nodes (which all can be connected to the same panel, and your files will be spread over them)!
 
 Run `npm i` to install the dependencies.
 
 ## Usage
+
+If not done already, set `PANEL_DISABLE_REGISTER` to `false`, and register your first account. **After that set it back to `true` and make sure to restart the panel!** (if registering is enabled, ANYONE can register and access the files and nodes)
 
 Run `npm run start-panel` to start the RStorage panel.
 
@@ -32,7 +36,7 @@ Go to your node (`localhost:3001` by default) and copy the public key.
 
 Go to your panel (`localhost:3000` by default), login, and paste the public key (and change the ip/port if you have changed that). If you want to add more nodes, repeat the same steps (installation => copying => pasting).
 
-Play around with `PANEL_MAX_SIZE` in the `.env` if you're getting out of memory crashes set it lower. This sets the amount of mb for each file part. (So for example 2mb file with `PANEL_MAX_SIZE` set to 1, would give 2 parts (and if you have multiple nodes those parts will be randomly spread)).
+Play around with `PANEL_MAX_SIZE` in the environment variables if you're getting out of memory crashes (set it lower until you get no crashes anymore).
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
@@ -43,7 +47,7 @@ Please make sure to update tests as appropriate.
 
 * login system
 	* [x] basic login system
-	* [ ] 2fa
+	* [x] 2fa
 	* [ ] user management for admin
 	* [ ] email verification + password reset
 * connecting node to panel
@@ -74,6 +78,9 @@ Please make sure to update tests as appropriate.
 
 * PANEL_FORCE_SPREADING (Default: true)
 	* This will force the spreading of a uploaded file, no matter the size (see option above).
+
+* PANEL_DISABLE_REGISTER (Default: true)
+	* This will disable being able to register new accounts.
 
 * PANEL_PORT (Default: 3000)
 	* The port the panel is listening on.
