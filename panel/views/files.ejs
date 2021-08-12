@@ -8,12 +8,12 @@
 		<script src="/js/main.js"></script>
 	</head>
     <body>
-        <form method="POST" action="/files/<%=node%>/upload" enctype="multipart/form-data">
+        <form method="POST" action="/files/upload?path=<%=path%>" enctype="multipart/form-data">
             <input type="submit" value="upload" />
             <input type="file" name="upload" />
         </form>
 
-        <button onclick="dirCreate('<%=node%>');">Create directory</button>
+        <button onclick="dirCreate();">Create directory</button>
         <input id="createDirectory" type="text" value="<%=path%>">
 
         <table>
@@ -27,15 +27,14 @@
             <% } %>
             <%directories.forEach(directory => {%>
                 <tr>
-                    <td><a href="?path=<%=path%><%=directory%>"><%=directory%></a></td>
-                    <th><button onclick="fileDelete('<%=node%>', '<%=path%>', '<%=directory%>', true);">Delete</button></th>
+                    <td><a href="?path=<%=directory%>"><%=directory%></a></td>
                 </tr>
             <%})%>
             <%files.forEach(file => { %>
                 <tr>
                     <td><%=file%></td>
-                    <th><button onclick="fileDelete('<%=node%>', '<%=path%>', '<%=file%>', false);">Delete</button></th>
-                    <th><button onclick="fileDownload('<%=node%>', '<%=path%>', '<%=file%>');">Download</button></th>
+                    <th><button onclick="fileDelete('<%=path%>', '<%=file%>');">Delete</button></th>
+                    <th><button onclick="fileDownload('<%=path%>', '<%=file%>');">Download</button></th>
                 </tr>
             <% }); %>
         </table>

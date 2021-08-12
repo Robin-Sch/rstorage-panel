@@ -1,163 +1,190 @@
 const { Router } = require('express');
 const fetch = require('node-fetch');
+const { Types } = require('mongoose');
 
 const { unpack, pack, encrypt, decrypt } = require('../crypt.js');
 const NodeModel = require('../mongodb/NodeModel.js');
+const PartModel = require('../mongodb/PartModel.js');
 
-const { INVALID_BODY, INVALID_NODE, PROBLEMS_CONNECTING_NODE, SUCCESS } = require('../../responses.json');
+const { INVALID_BODY, ALREADY_SUCH_FILE_OR_DIR, PROBLEMS_CONNECTING_NODE, SUCCESS } = require('../../responses.json');
+
+const { PANEL_MAX_SIZE } = process.env;
 
 const router = Router();
 
 router
-	.get('/:id/view', async (req, res) => {
+	.get('/view', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
 
-		const node = await NodeModel.findById(req.params.id);
-		if (!node) return res.status(403).render('error', { error: INVALID_NODE });
+		const path = cleanPath(req.query.path);
 
-		let path = req.query.path;
-		if (!path) path = '/';
-		if (!path.startsWith('/')) path = `/${path}`;
-		if (!path.endsWith('/')) path = `${path}/`;
+		const files = await PartModel.find({ path }).distinct('name');
+		const directories = await PartModel.find({ 'path': { $regex: `^${path}` } }).ne('path', path).distinct('path');
 
-		const body = {
-			path,
-		};
-		const encryptedbody = pack(node.publickey, body);
-
-		fetch(`http://${node.ip}:${node.port}/files/view`, {
-			method: 'POST',
-			body: JSON.stringify(encryptedbody),
-			headers: { 'Content-Type': 'application/json' },
-		}).then(res2 => res2.json())
-			.then(encryptedjson => {
-				if (!encryptedjson.encrypted && !encryptedjson.success) return res.status(502).render('error', { error: encryptedjson.message });
-				const json = JSON.parse(unpack(encryptedjson));
-
-				if (!json.success) return res.status(502).render('error', { error: json.message });
-				else res.status(200).render('files', { path: body.path, files: json.files, directories: json.directories, node: node._id });
-			}).catch(() => {
-				return res.status(500).render('error', { error: PROBLEMS_CONNECTING_NODE });
-			});
+		return res.status(200).render('files', { path, files, directories });
 	})
-	.post('/:id/delete', async (req, res) => {
+	.post('/delete', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
 
-		if (!req.body.file || !req.body.isDir == undefined) return res.status(400).json({ message: INVALID_BODY });
+		if (!req.body.name) return res.status(400).json({ message: INVALID_BODY });
 
-		const node = await NodeModel.findById(req.params.id);
-		if (!node) return res.status(403).json({ message: INVALID_NODE, success: false });
+		const path = cleanPath(req.body.path);
+		const name = req.body.name;
 
-		const body = {
-			file: req.body.file,
-			path: req.body.path || '/',
-			isDir: req.body.isDir,
-		};
-		const encryptedbody = pack(node.publickey, body);
+		const parts = await PartModel.find({ path, name });
 
-		fetch(`http://${node.ip}:${node.port}/files/delete`, {
-			method: 'POST',
-			body: JSON.stringify(encryptedbody),
-			headers: { 'Content-Type': 'application/json' },
-		}).then(res2 => res2.json())
-			.then(encryptedjson => {
-				if (!encryptedjson.encrypted && !encryptedjson.success) return res.status(502).json({ message: encryptedjson.message, success: false });
-				const json = JSON.parse(unpack(encryptedjson));
+		for(let i = 0; i < parts.length; i++) {
+			const part = parts[i];
 
-				if (!json.success) return res.status(502).json({ message: json.message, success: false });
-				else return res.status(200).json({ message: SUCCESS, success: true });
-			}).catch(() => {
-				return res.status(500).json({ message: PROBLEMS_CONNECTING_NODE, success: false });
-			});
+			const body = {
+				id: part._id,
+			};
+
+			const node = await NodeModel.findById(part.node);
+
+			const encryptedbody = pack(node.publickey, body);
+
+			fetch(`http://${node.ip}:${node.port}/files/delete`, {
+				method: 'POST',
+				body: JSON.stringify(encryptedbody),
+				headers: { 'Content-Type': 'application/json' },
+			}).then(res2 => res2.json())
+				.then(async encryptedjson => {
+					if (!encryptedjson.encrypted && !encryptedjson.success) return res.status(502).json({ message: encryptedjson.message, success: false });
+					const json = JSON.parse(unpack(encryptedjson));
+
+					if (!json.success) {
+						return res.status(502).json({ message: json.message, success: false });
+					} else if (i == parts.length - 1) {
+						await PartModel.deleteOne({ _id: part._id });
+
+						return res.status(200).json({ message: SUCCESS, success: true });
+					} else {
+						return PartModel.deleteOne({ _id: part._id });
+					}
+				}).catch(() => {
+					return res.status(500).json({ message: PROBLEMS_CONNECTING_NODE, success: false });
+				});
+		}
 	})
-	.post('/:id/upload', async (req, res) => {
+	.post('/upload', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
 
-		const node = await NodeModel.findById(req.params.id);
-		if (!node) return res.status(403).json({ message: INVALID_NODE, success: false });
+		const nodes = await NodeModel.find({ });
 
 		if (!req.files || !req.files.upload) return res.status(400).render('error', { error: INVALID_BODY, success: false });
 
-		const content = encrypt(req.files.upload.data);
+		const path = cleanPath(req.query.path);
+		const name = req.files.upload.name || 'undefined';
 
-		const body = {
-			content,
-			name: req.files.upload.name,
-			path: req.body.path || '/',
-		};
+		const exists = await PartModel.findOne({ path, name });
+		if (exists) return res.status(400).render('error', { error: ALREADY_SUCH_FILE_OR_DIR, success: false });
 
-		// big files fail because of pack using too much memory?
-		const encryptedbody = pack(node.publickey, body);
+		const loops = Math.ceil(req.files.upload.data.length / 1000 / 1000 / PANEL_MAX_SIZE);
+		const amountPerLoop = Math.floor(req.files.upload.data.length / loops);
+		const remaining = req.files.upload.data.length % loops;
 
-		fetch(`http://${node.ip}:${node.port}/files/upload`, {
-			method: 'POST',
-			body: JSON.stringify(encryptedbody),
-			headers: { 'Content-Type': 'application/json' },
-		}).then(res2 => res2.json())
-			.then(encryptedjson => {
-				if (!encryptedjson.encrypted && !encryptedjson.success) return res.status(502).render('error', { error: encryptedjson.message });
-				const json = JSON.parse(unpack(encryptedjson));
+		for(let i = 0; i < loops; i++) {
+			const extra = i == loops - 1 ? remaining : 0;
 
-				if (!json.success) return res.status(502).render('error', { error: json.message });
-				else return res.status(200).redirect(`/files/${req.params.id}/view${body.path}`);
-			}).catch(() => {
-				return res.status(500).render('error', { message: PROBLEMS_CONNECTING_NODE, success: false });
+			const nodeForThisLoop = nodes[Math.floor(Math.random() * nodes.length)];
+			const dataForThisLoop = req.files.upload.data.slice(i * amountPerLoop, (i + 1) * amountPerLoop + extra);
+
+			const content = encrypt(dataForThisLoop);
+
+			const id = new Types.ObjectId();
+
+			const body = {
+				content,
+				id,
+			};
+
+			const encryptedbody = pack(nodeForThisLoop.publickey, body);
+
+			const temp = await fetch(`http://${nodeForThisLoop.ip}:${nodeForThisLoop.port}/files/upload`, {
+				method: 'POST',
+				body: JSON.stringify(encryptedbody),
+				headers: { 'Content-Type': 'application/json' },
 			});
+
+			const encryptedjson = await temp.json();
+			if (!encryptedjson.encrypted && !encryptedjson.success) return res.status(502).render('error', { error: encryptedjson.message });
+			const json = JSON.parse(unpack(encryptedjson));
+
+			if (!json.success) {
+				return res.status(502).render('error', { error: json.message });
+			} else {
+				const part = new PartModel({
+					_id: id,
+					node: nodeForThisLoop._id,
+					name,
+					path,
+					index: i,
+				});
+
+				await part.save();
+
+				if(i == loops - 1) {
+					return res.status(200).redirect(`/files/view?path=${path}`);
+				}
+			}
+		}
 	})
-	.post('/:id/download', async (req, res) => {
+	.post('/download', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
 
-		const node = await NodeModel.findById(req.params.id);
-		if (!node) return res.status(403).json({ message: INVALID_NODE, success: false });
+		if (!req.body.name) return res.status(400).json({ message: INVALID_BODY });
 
-		if (!req.body.name) return res.status(400).json({ message: INVALID_BODY, success: false });
+		const path = cleanPath(req.body.path);
+		const name = req.body.name;
 
-		const body = {
-			name: req.body.name,
-			path: req.body.path || '/',
-		};
-		const encryptedbody = pack(node.publickey, body);
+		const buffers = [];
 
-		fetch(`http://${node.ip}:${node.port}/files/download`, {
-			method: 'POST',
-			body: JSON.stringify(encryptedbody),
-			headers: { 'Content-Type': 'application/json' },
-		}).then(res2 => res2.json())
-			.then(encryptedjson => {
-				if (!encryptedjson.encrypted && !encryptedjson.success) return res.status(502).json({ message: encryptedjson.message, success: false });
-				const json = JSON.parse(unpack(encryptedjson));
+		const parts = await PartModel.find({ path, name }).sort('index');
 
-				if (!json.success) return res.status(502).json({ message: json.message, success: false });
-				else return res.status(200).json({ content: decrypt(Buffer.from(json.content.data)), name: json.name, message: SUCCESS, success: true });
-			}).catch(() => {
-				return res.status(500).json({ message: PROBLEMS_CONNECTING_NODE, success: false });
-			});
-	})
-	.post('/:id/create', async (req, res) => {
-		if (!req.session.loggedin) return res.redirect('/login');
+		for(let i = 0; i < parts.length; i++) {
+			const part = parts[i];
 
-		const node = await NodeModel.findById(req.params.id);
-		if (!node) return res.status(403).json({ message: INVALID_NODE, success: false });
+			const body = {
+				id: part._id,
+			};
 
-		const body = {
-			name: req.body.name || '/',
-		};
-		const encryptedbody = pack(node.publickey, body);
+			const node = await NodeModel.findById(part.node);
 
-		fetch(`http://${node.ip}:${node.port}/files/create`, {
-			method: 'POST',
-			body: JSON.stringify(encryptedbody),
-			headers: { 'Content-Type': 'application/json' },
-		}).then(res2 => res2.json())
-			.then(encryptedjson => {
-				if (!encryptedjson.encrypted && !encryptedjson.success) return res.status(502).json({ message: encryptedjson.message, success: false });
-				const json = JSON.parse(unpack(encryptedjson));
+			const encryptedbody = pack(node.publickey, body);
 
-				if (!json.success) return res.status(502).json({ message: json.message, success: false });
-				else return res.status(200).json({ buffer: json.buffer, name: json.name, message: SUCCESS, success: true });
-			}).catch(() => {
-				return res.status(500).json({ message: PROBLEMS_CONNECTING_NODE, success: false });
-			});
+			fetch(`http://${node.ip}:${node.port}/files/download`, {
+				method: 'POST',
+				body: JSON.stringify(encryptedbody),
+				headers: { 'Content-Type': 'application/json' },
+			}).then(res2 => res2.json())
+				.then(async encryptedjson => {
+					if (!encryptedjson.encrypted && !encryptedjson.success) return res.status(502).json({ message: encryptedjson.message, success: false });
+					const json = JSON.parse(unpack(encryptedjson));
+
+					if (!json.success) {
+						return res.status(502).json({ message: json.message, success: false });
+					} else if (i == parts.length - 1) {
+						buffers.push(decrypt(Buffer.from(json.content)));
+
+						const content = Buffer.concat(buffers);
+
+						return res.status(200).json({ content, name, message: SUCCESS, success: true });
+					} else {
+						return buffers.push(decrypt(Buffer.from(json.content)));
+					}
+				}).catch(() => {
+					return res.status(500).json({ message: PROBLEMS_CONNECTING_NODE, success: false });
+				});
+		}
 	});
 
 module.exports = router;
+
+const cleanPath = (path) => {
+	if (!path) path = '/';
+	if (!path.startsWith('/')) path = `/${path}`;
+	if (!path.endsWith('/')) path = `${path}/`;
+
+	return path;
+};

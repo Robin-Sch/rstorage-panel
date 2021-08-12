@@ -18,7 +18,7 @@ const nodesRouter = require('./routers/nodes.js');
 const filesRouter = require('./routers/files.js');
 
 const {
-	MONGODB,
+	PANEL_MONGODB,
 	PANEL_PORT,
 } = process.env;
 
@@ -43,7 +43,7 @@ const NodeModel = require('./mongodb/NodeModel.js');
 
 const app = express();
 
-connect(MONGODB, {
+connect(PANEL_MONGODB, {
 	useNewUrlParser: true,
 	useUnifiedTopology: true,
 	useFindAndModify: false,

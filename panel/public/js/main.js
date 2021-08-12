@@ -65,27 +65,26 @@ const nodeDelete = (id) => {
 		});
 };
 
-const fileDelete = (nodeID, path, file, isDir) => {
+const fileDelete = (path, name) => {
 	const body = {
-		file,
+		name,
 		path,
-		isDir,
 	};
 
-	fetch(`/files/${nodeID}/delete`, {
+	fetch(`/files/delete`, {
 		method: 'POST',
 		body: JSON.stringify(body),
 		headers: { 'Content-Type': 'application/json' },
 	}).then(res => res.json())
 		.then(json => {
 			if (!json.success) return error(true, json.message);
-			else return window.location.href = `/files/${nodeID}/view${body.path}`;
+			else return window.location = window.location.pathname + replaceQueryParam('path', body.path, window.location.search);
 		}).catch(() => {
 			return error(true, 'There are problems connecting to the server!');
 		});
 };
 
-const fileDownload = (nodeID, path, name) => {
+const fileDownload = (path, name) => {
 	const body = {
 		name,
 		path,
@@ -93,7 +92,7 @@ const fileDownload = (nodeID, path, name) => {
 
 	alert('File is downloading, please give it some time (max 5 minutes) and DON\'T reload the page!')
 
-	fetch(`/files/${nodeID}/download`, {
+	fetch(`/files/download`, {
 		method: 'POST',
 		body: JSON.stringify(body),
 		headers: { 'Content-Type': 'application/json' },
@@ -106,24 +105,10 @@ const fileDownload = (nodeID, path, name) => {
 		});
 };
 
-const dirCreate = (nodeID) => {
+const dirCreate = () => {
 	const name = document.getElementById('createDirectory').value || '/';
 
-	const body = {
-		name,
-	};
-
-	fetch(`/files/${nodeID}/create`, {
-		method: 'POST',
-		body: JSON.stringify(body),
-		headers: { 'Content-Type': 'application/json' },
-	}).then(res => res.json())
-		.then(json => {
-			if (!json.success) return error(true, json.message);
-			else return window.location.href = `/files/${nodeID}/view${body.name}`;
-		}).catch(() => {
-			return error(true, 'There are problems connecting to the server!');
-		});
+	return window.location = window.location.pathname + replaceQueryParam('path', name, window.location.search);
 }
 
 const moveoneback = () => {

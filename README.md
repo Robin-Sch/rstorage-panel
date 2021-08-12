@@ -8,13 +8,17 @@ Uploading/Downloading takes some time, this is because of the encryption and dec
 
 You would want to host the panel on a high amount of CPU cores and RAM server (file encryption and decryption happens here), and the node(s) on a server with a big disk.
 
-Note: RStorage isn't done yet, and won't function properly. You could help by looking at the what has to be done section down below and creating a PR/issue.
+Note: RStorage isn't done yet, and won't function properly. Every update could break your previous installation and (as of right now) it's recommended that you reinstall everything if a new update comes out, as there's no guarantee for backwards compatibility.
+
+You could help by looking at the what has to be done section down below and creating a PR/issue. For new suggestions please open an issue first.
 
 ## Installation
 
-Install [nodejs](https://nodejs.org/en/download/).
+Install [nodejs](https://nodejs.org/en/download/) (if not done already previously).
 
-Rename `.env.example` to `.env`, and fill in the secrets.
+Rename `.env.example` to `.env`, and fill in the secrets. Fill in the envs starting with `PANEL_` if you want to install the panel, and fill in the envs starting with `NODE_` if you want to install a node.
+
+Optionally: you can install both if you want, although it's not recommended. For more security host the panel and the node on a separate server. Or even host multiple nodes (which all can be connected to the same panel, and your files will be spread over them)!
 
 Run `npm i` to install the dependencies.
 
@@ -22,11 +26,13 @@ Run `npm i` to install the dependencies.
 
 Run `npm run start-panel` to start the RStorage panel.
 
-Run `npm run start-node` to start a node.
+Run `npm run start-node` to start a node (note: a node can be hosted on a different server (which is recommended for better security)).
 
 Go to your node (`localhost:3001` by default) and copy the public key.
 
-Go to your panel (`localhost:3000` by default), login, and paste the public key (and change the ip/port if you have changed that).
+Go to your panel (`localhost:3000` by default), login, and paste the public key (and change the ip/port if you have changed that). If you want to add more nodes, repeat the same steps (installation => copying => pasting).
+
+Play around with `PANEL_MAX_SIZE` in the `.env` if you're getting out of memory crashes set it lower. This sets the amount of mb for each file part. (So for example 2mb file with `PANEL_MAX_SIZE` set to 1, would give 2 parts (and if you have multiple nodes those parts will be randomly spread)).
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
@@ -38,6 +44,7 @@ Please make sure to update tests as appropriate.
 * login system
 	* [x] basic login system
 	* [ ] 2fa
+	* [ ] user management for admin
 	* [ ] email verification + password reset
 * connecting node to panel
 	* [x] generating key pair on both panel and node
@@ -51,11 +58,25 @@ Please make sure to update tests as appropriate.
 		* [x] deleting files
 		* [x] downloading files
 		* [x] creating directories
+		* [ ] download/upload progress?
 	* encrypting files
 		* [x] encrypting on server
-		* [ ] big file encryption
+		* [x] big file encryption
 		* [ ] encrypting on client?
-	* [ ] spread file contents over all nodes?
+	* [x] spread file contents randomly over all nodes
+
+## Environment variables
+* PANEL_MONGODB
+	* This is the connection URL to a mongodb instance.
+
+* PANEL_MAX_SIZE (Default: 8) (in megabytes)
+	* This is the maximum size (in megabytes) a (decrypted) file part should be. If set to 8, that means if a file is between 8 and 16 mb, there will be 2 file parts (useful for changing if your server has a lot of memory, or if you want to spread the file more) (the lower it is, the more the file will be spread).
+
+* PANEL_PORT (Default: 3000)
+	* The port the panel is listening on.
+
+* NODE_PORT (Default: 3001)
+	* The port the node is listening on.
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)

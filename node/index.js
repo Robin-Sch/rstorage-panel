@@ -2,7 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const { join } = require('path');
-const { readFileSync, writeFileSync, existsSync, readdirSync, statSync, unlinkSync, rmSync, mkdirSync } = require('fs');
+const { readFileSync, writeFileSync, existsSync, unlinkSync, mkdirSync } = require('fs');
 
 const { generateKeys, unpack, pack } = require('./crypt.js');
 
@@ -33,8 +33,8 @@ if (!NODE_PRIVATE_KEY || !NODE_PUBLIC_KEY) {
 const app = express();
 
 app
-	.use(express.json({ limit: '100mb' }))
-	.use(express.urlencoded({ limit: '100mb', extended: true }))
+	.use(express.json({ limit: '2000mb' }))
+	.use(express.urlencoded({ limit: '2000mb', extended: true }))
 	.set('views', join(__dirname, 'views'))
 	.set('view engine', 'ejs')
 	.get('/', async (req, res) => {
@@ -75,59 +75,6 @@ app
 		const encryptedjson = pack(newPublicServerKey, json);
 		return res.status(200).json(encryptedjson);
 	})
-	.post('/files/view', async (req, res) => {
-		if (!req.body || !req.body.encrypted || !req.body.key) return res.status(400).json({ message: NOT_ENCRYPTED_REQUEST, success: false });
-		if (!SERVER_PUBLIC_KEY) return res.status(400).json({ message: NOT_CONNECTED_TO_PANEL, success: false, reconnect: true });
-
-		const encryptedbody = req.body;
-		const body = JSON.parse(unpack(encryptedbody));
-
-		if (!body.path) {
-			const json = {
-				message: INVALID_BODY,
-				success: false,
-			};
-			const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
-
-			return res.status(400).json(encryptedjson);
-		}
-
-		const dir = join(__dirname, 'files', body.path);
-
-		const everything = readdirSync(dir);
-
-		if (everything.length == 0) {
-			const json = {
-				files: [],
-				directories: [],
-				success: true,
-			};
-
-			const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
-			return res.status(200).json(encryptedjson);
-		}
-
-		const files = [];
-		const directories = [];
-
-		for (let i = 0; i < everything.length; i++) {
-			const current = everything[i];
-
-			if (statSync(`${dir}/${current}`).isDirectory()) directories.push(current);
-			else files.push(current);
-
-			if (i == everything.length - 1) {
-				const json = {
-					files,
-					directories,
-					success: true,
-				};
-
-				const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
-				return res.status(200).json(encryptedjson);
-			}
-		}
-	})
 	.post('/files/delete', async (req, res) => {
 		if (!req.body || !req.body.encrypted || !req.body.key) return res.status(400).json({ message: NOT_ENCRYPTED_REQUEST, success: false });
 		if (!SERVER_PUBLIC_KEY) return res.status(400).json({ message: NOT_CONNECTED_TO_PANEL, success: false, reconnect: true });
@@ -135,7 +82,7 @@ app
 		const encryptedbody = req.body;
 		const body = JSON.parse(unpack(encryptedbody));
 
-		if (!body.file) {
+		if (!body.id) {
 			const json = {
 				message: INVALID_BODY,
 				success: false,
@@ -145,9 +92,9 @@ app
 			return res.status(400).json(encryptedjson);
 		}
 
-		const dir = join(__dirname, 'files', body.path || '/');
+		const dir = join(__dirname, 'files');
 
-		if (!existsSync(`${dir}/${body.file}`)) {
+		if (!existsSync(`${dir}/${body.id}`)) {
 			const json = {
 				message: NO_SUCH_FILE_OR_DIR,
 				success: false,
@@ -157,8 +104,7 @@ app
 			return res.status(400).json(encryptedjson);
 		}
 
-		if(body.isDir) rmSync(`${dir}/${body.file}`, { recursive: true });
-		else unlinkSync(`${dir}/${body.file}`);
+		unlinkSync(`${dir}/${body.id}`);
 
 		const json = {
 			message: SUCCESS,
@@ -175,7 +121,8 @@ app
 		const encryptedbody = req.body;
 		const body = JSON.parse(unpack(encryptedbody));
 
-		if (!body.name || !body.content) {
+
+		if (!body.id || !body.content) {
 			const json = {
 				message: INVALID_BODY,
 				success: false,
@@ -185,9 +132,9 @@ app
 			return res.status(400).json(encryptedjson);
 		}
 
-		const dir = join(__dirname, 'files', body.path || '/');
+		const dir = join(__dirname, 'files');
 
-		if (existsSync(`${dir}/${body.name}`)) {
+		if (existsSync(`${dir}/${body.id}`)) {
 			const json = {
 				message: ALREADY_SUCH_FILE_OR_DIR,
 				success: false,
@@ -197,7 +144,7 @@ app
 			return res.status(400).json(encryptedjson);
 		}
 
-		writeFileSync(`${dir}/${body.name}`, Buffer.from(body.content.data), 'binary');
+		writeFileSync(`${dir}/${body.id}`, Buffer.from(body.content.data), 'binary');
 
 		const json = {
 			message: SUCCESS,
@@ -214,7 +161,7 @@ app
 		const encryptedbody = req.body;
 		const body = JSON.parse(unpack(encryptedbody));
 
-		if (!body.name) {
+		if (!body.id) {
 			const json = {
 				message: INVALID_BODY,
 				success: false,
@@ -224,9 +171,9 @@ app
 			return res.status(400).json(encryptedjson);
 		}
 
-		const dir = join(__dirname, 'files', body.path || '/');
+		const dir = join(__dirname, 'files');
 
-		if (!existsSync(`${dir}/${body.name}`)) {
+		if (!existsSync(`${dir}/${body.id}`)) {
 			const json = {
 				message: NO_SUCH_FILE_OR_DIR,
 				success: false,
@@ -236,51 +183,10 @@ app
 			return res.status(400).json(encryptedjson);
 		}
 
-		const content = readFileSync(`${dir}/${body.name}`);
+		const content = readFileSync(`${dir}/${body.id}`);
 
 		const json = {
 			content,
-			name: body.name,
-			message: SUCCESS,
-			success: true,
-		};
-
-		// TODO: big files fail because of pack using too much memory?
-		const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
-		return res.status(200).json(encryptedjson);
-	})
-	.post('/files/create', async (req, res) => {
-		if (!req.body || !req.body.encrypted || !req.body.key) return res.status(400).json({ message: NOT_ENCRYPTED_REQUEST, success: false });
-		if (!SERVER_PUBLIC_KEY) return res.status(400).json({ message: NOT_CONNECTED_TO_PANEL, success: false, reconnect: true });
-
-		const encryptedbody = req.body;
-		const body = JSON.parse(unpack(encryptedbody));
-
-		if (!body.name) {
-			const json = {
-				message: INVALID_BODY,
-				success: false,
-			};
-			const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
-
-			return res.status(400).json(encryptedjson);
-		}
-
-		const dir = join(__dirname, 'files', body.name || '/');
-
-		if (existsSync(dir)) {
-			const json = {
-				message: ALREADY_SUCH_FILE_OR_DIR,
-				success: false,
-			};
-			const encryptedjson = pack(SERVER_PUBLIC_KEY, json);
-
-			return res.status(400).json(encryptedjson);
-		}
-
-		mkdirSync(dir);
-
-		const json = {
 			message: SUCCESS,
 			success: true,
 		};
