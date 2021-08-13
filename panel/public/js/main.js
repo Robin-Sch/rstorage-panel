@@ -66,43 +66,29 @@ const nodeDelete = (id) => {
 };
 
 const fileDelete = (path, name) => {
-	const body = {
-		name,
-		path,
-	};
-
-	fetch(`/files/delete`, {
-		method: 'POST',
-		body: JSON.stringify(body),
-		headers: { 'Content-Type': 'application/json' },
-	}).then(res => res.json())
-		.then(json => {
-			if (!json.success) return error(true, json.message);
-			else return window.location = window.location.pathname + replaceQueryParam('path', body.path, window.location.search);
-		}).catch(() => {
-			return error(true, 'There are problems connecting to the server!');
-		});
+	return socket.emit('delete', { path, name });
 };
 
+const fileUpload = () => {
+	const content = document.getElementById('file').files[0];
+	if (!content) return;
+
+	document.getElementById('percentage-upload').innerHTML = '0%';
+
+	const name = content.name;
+
+	const params = new URLSearchParams(window.location.search)
+	const path  = params.get('path');
+
+	const stream = ss.createStream();
+	const blobStream = ss.createBlobReadStream(content);
+
+	ss(socket).emit('upload', stream, {size: content.size, path, name});
+	return blobStream.pipe(stream);
+}
+
 const fileDownload = (path, name) => {
-	const body = {
-		name,
-		path,
-	};
-
-	alert('File is downloading, please give it some time (max 5 minutes) and DON\'T reload the page!')
-
-	fetch(`/files/download`, {
-		method: 'POST',
-		body: JSON.stringify(body),
-		headers: { 'Content-Type': 'application/json' },
-	}).then(res => res.json())
-		.then(json => {
-			if (!json.success) return error(true, json.message);
-			else return prepareAndDownload(json.name, json.content.data)
-		}).catch(() => {
-			return error(true, 'There are problems connecting to the server!');
-		});
+	return socket.emit('download', { path, name });
 };
 
 const dirCreate = () => {

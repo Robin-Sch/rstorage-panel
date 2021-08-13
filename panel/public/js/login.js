@@ -12,7 +12,7 @@ const login = async () => {
 		token,
 	};
 
-	fetch('/login', {
+	fetch('/accounts/login', {
 		method: 'POST',
 		body: JSON.stringify(body),
 		headers: { 'Content-Type': 'application/json' },
@@ -43,7 +43,7 @@ const register = async () => {
 		totp,
 	};
 
-	fetch('/register', {
+	fetch('/accounts/register', {
 		method: 'POST',
 		body: JSON.stringify(body),
 		headers: { 'Content-Type': 'application/json' },
@@ -60,8 +60,7 @@ const register = async () => {
 				}
 				return window.location.href = '/';
 			}
-		}).catch(e => {
-			console.log(e);
+		}).catch(() => {
 			return error(true, 'There are problems connecting to the server!');
 		});
 }
@@ -75,7 +74,7 @@ const verify = () => {
 		token,
 	};
 
-	fetch('/totp-verify', {
+	fetch('/accounts/totp-verify', {
 		method: 'POST',
 		body: JSON.stringify(body),
 		headers: { 'Content-Type': 'application/json' },
@@ -104,7 +103,7 @@ const validate = (username, password, email) => {
 }
 
 const change = (block, disabled) => {
-	if (disabled) return error(true, 'Registering is disabled! If this is your first time, please check the readme!')
+	if (disabled && disabled.toLowerCase() == 'true') return error(true, 'Registering is disabled! If this is your first time, please check the readme!')
 	error(false);
 	const other = block == 'login' ? 'register' : 'login';
 	document.getElementById(block).style = 'display: block';

@@ -5,13 +5,20 @@
 		<title>RStorage panel</title>
 		<link rel="stylesheet" href="/css/index.css">
 		<script src="/js/download.min.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="/js/socket.io-stream.min.js"></script>
 		<script src="/js/main.js"></script>
+        <script src="/js/socket.js"></script>
 	</head>
     <body>
-        <form method="POST" action="/files/upload?path=<%=path%>" enctype="multipart/form-data">
+        <!-- <form method="POST" action="/files/upload?path=<%=path%>" enctype="multipart/form-data">
             <input type="submit" value="upload" />
             <input type="file" name="upload" />
-        </form>
+        </form> -->
+
+        <button onclick="fileUpload();">upload</button>
+        <input id="file" type="file" name="upload"/>
+        <span id="percentage-upload"></span><br>
 
         <button onclick="dirCreate();">Create directory</button>
         <input id="createDirectory" type="text" value="<%=path%>">
@@ -40,5 +47,6 @@
         </table>
 
         <p id="response" style="color: red"></p>
+        <p id="messages"></p>
     </body>
 </html>

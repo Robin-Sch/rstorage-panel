@@ -62,7 +62,7 @@ Please make sure to update tests as appropriate.
 		* [x] deleting files
 		* [x] downloading files
 		* [x] creating directories
-		* [ ] download/upload progress?
+		* [x] download/upload progress
 	* encrypting files
 		* [x] encrypting on server
 		* [x] big file encryption
