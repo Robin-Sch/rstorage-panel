@@ -28,6 +28,8 @@ const login = async () => {
 		});
 }
 const register = async () => {
+	
+
 	const email = document.getElementById('Remail').value;
 	const username = document.getElementById('Rusername').value;
 	const password = document.getElementById('Rpassword').value;
@@ -53,6 +55,11 @@ const register = async () => {
 				return error(true, json.message)
 			} else {
 				if(totp && json.secret) {
+
+					new QRCode(document.getElementById("qrcode"), 
+					`otpauth://totp/R-storage%20Panel?secret=${json.secret}`
+					);
+					
 					document.getElementById('Tsecret').innerText = `Your secret is: ${json.secret}`;
 					document.getElementById('Temail').value = email;
 					document.getElementById('register').style = 'display: none;';
