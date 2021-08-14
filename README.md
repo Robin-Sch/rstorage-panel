@@ -60,7 +60,7 @@ npm start
 
 Go to your panel (`localhost:3000` by default) and login with email `admin` and password `admin`.
 
-**MAKE SURE TO CHANGE DEFAULT PASSWORD** (and if you want username/email too)!
+**MAKE SURE TO CHANGE DEFAULT PASSWORD** (and if you want, email can be changed too! **BUT DON'T CHANGE THE USERNAME**)!
 
 ## Usage
 ### Node
@@ -90,7 +90,7 @@ Please make sure to update tests as appropriate.
 	* [x] basic login system
 	* [x] 2fa
 	* [x] user management
-	* [ ] user permissions
+	* [x] user permissions
 	* [ ] email verification + password reset
 * connecting node to panel
 	* [x] generating key pair on both panel and node
@@ -124,6 +124,7 @@ Please make sure to update tests as appropriate.
 
 * PANEL_DISABLE_REGISTER (Default: true)
 	* This will disable being able to register new accounts.
+	* You shouldn't give others people access to your panel, because every file uploaded (by you) is accessable (with the correct permissions (by default, new accounts get 777))! But if you REALLY REALLY REALLY want them to create a new account, it's possible with this variable.
 
 * PANEL_PORT (Default: 3000)
 	* The port the panel is listening on.

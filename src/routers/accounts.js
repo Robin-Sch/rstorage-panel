@@ -4,7 +4,8 @@ const { compare, hash } = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
 
 const db = require('../sql.js');
-const { INVALID_USER, SUCCESS } = require('../../responses.json');
+const { getPermissions } = require('../utils.js');
+const { INVALID_USER, NO_PERMISSIONS, INVALID_BODY, SUCCESS } = require('../../responses.json');
 
 const {
 	PANEL_DISABLE_REGISTER,
@@ -19,6 +20,7 @@ const router = Router();
 router
 	.get('/:id/edit/', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
+		if (!req.session.permissions.user.includes(1)) return res.status(403).render('error', { error: NO_PERMISSIONS, success: false });
 
 		const user = await db.prepare('SELECT * FROM users WHERE id = ?;').get([req.params.id]);
 		if (!user) return res.status(403).render('error', { error: INVALID_USER });
@@ -28,21 +30,39 @@ router
 			username: user.username,
 			email: user.email,
 			password: user.password,
+			permissions: user.permissions,
 		};
 
 		return res.status(200).render('user', { details });
 	})
 	.post('/:id/edit/', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
+		if (!req.session.permissions.user.includes(1)) return res.status(403).json({ message: NO_PERMISSIONS, success: false });
 
 		const {
 			username,
 			email,
 			password,
+			permissions,
 		} = req.body;
+
+		if (!username || !email || !permissions) return res.status(400).json({ message: INVALID_BODY, success: false });
 
 		const user = await db.prepare('SELECT * FROM users WHERE id = ?;').get([req.params.id]);
 		if (!user) return res.status(403).json({ message: INVALID_USER, success: false });
+
+		let temp = permissions;
+		if (isNaN(temp)) temp = parseInt(temp);
+
+		const userPermission = temp % 10;
+		temp = (temp - userPermission) / 10;
+		const nodePermission = temp % 10;
+		temp = (temp - nodePermission) / 10;
+		const filePermission = temp % 10;
+
+		if (![0, 1, 2, 3, 4, 5, 6, 7].includes(filePermission)) return res.status(400).json({ message: INVALID_BODY, success: false });
+		if (![0, 1, 2, 3, 4, 5, 6, 7].includes(nodePermission)) return res.status(400).json({ message: INVALID_BODY, success: false });
+		if (![0, 1, 2, 3, 4, 5, 6, 7].includes(userPermission)) return res.status(400).json({ message: INVALID_BODY, success: false });
 
 		let hashedPassword = user.password;
 
@@ -50,12 +70,13 @@ router
 			hashedPassword = await hash(password, 10);
 		}
 
-		await db.prepare('UPDATE users SET username = ?, email = ?, password = ? WHERE id = ?;').run([username, email, hashedPassword, req.params.id]);
+		await db.prepare('UPDATE users SET username = ?, email = ?, password = ?, permissions = ? WHERE id = ?;').run([username, email, hashedPassword, permissions, req.params.id]);
 
 		return res.status(200).json({ message: SUCCESS, success: true });
 	})
 	.post('/:id/delete/', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
+		if (!req.session.permissions.user.includes(4)) return res.status(403).json({ message: NO_PERMISSIONS, success: false });
 
 		const user = await db.prepare('SELECT * FROM users WHERE id = ?;').get([req.params.id]);
 		if (!user) return res.status(403).json({ message: INVALID_USER, success: false });
@@ -92,6 +113,7 @@ router
 			req.session.loggedin = true;
 			req.session.username = user.username;
 			req.session.userID = user.id;
+			req.session.permissions = await getPermissions(user.permissions);
 
 			return res.json({ message: 'Correct', success: true });
 		} else {
@@ -124,12 +146,14 @@ router
 		const hashedPassword = await hash(password, 10);
 		const id = uuidv4();
 		const verified = secret ? 'false' : 'true';
+		const permissions = '000';
 
-		await db.prepare('INSERT INTO users (id, username, email, password, verified, secret) VALUES (?,?,?,?,?,?);').run([id, username, email, hashedPassword, verified, secret]);
+		await db.prepare('INSERT INTO users (id, username, email, password, verified, secret, permissions) VALUES (?,?,?,?,?,?,?);').run([id, username, email, hashedPassword, verified, secret, permissions]);
 
 		if (!secret) req.session.loggedin = true;
 		if (!secret) req.session.username = username;
 		if (!secret) req.session.userID = id;
+		if (!secret) req.session.permissions = await getPermissions(permissions);
 
 		const json = { message: 'Correct', success: true };
 		if (secret) json.secret = secret;
@@ -159,6 +183,7 @@ router
 			req.session.loggedin = true;
 			req.session.username = user.username;
 			req.session.userID = user.id;
+			req.session.permissions = await getPermissions(user.permissions);
 
 			return res.json({ success: true });
 		} else {

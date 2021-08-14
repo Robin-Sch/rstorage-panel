@@ -6,5 +6,6 @@
 	"INVALID_USER": "No user with that ID found!",
 	"NO_NODES": "There are no nodes connected!",
 	"PROBLEMS_CONNECTING_NODE": "There are problems connecting to the node, please try again!",
+	"NO_PERMISSIONS": "You don't have enough permissions to do that action!",
 	"SUCCESS": "Success!"
 }

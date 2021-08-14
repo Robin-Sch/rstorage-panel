@@ -17,7 +17,7 @@ const ss = require('socket.io-stream');
 const { generateKeys, unpack, pack, encrypt, decrypt } = require('./crypt.js');
 const { cleanPath, getNodes, getUsers } = require('./utils.js');
 const db = require('./sql.js');
-const { ALREADY_SUCH_FILE_OR_DIR, NO_SUCH_FILE_OR_DIR, NO_NODES } = require('../responses.json');
+const { ALREADY_SUCH_FILE_OR_DIR, NO_SUCH_FILE_OR_DIR, NO_NODES, NO_PERMISSIONS } = require('../responses.json');
 
 const accountsRouter = require('./routers/accounts.js');
 const nodesRouter = require('./routers/nodes.js');
@@ -81,6 +81,7 @@ io.on('connection', (socket) => {
 
 	ss(socket).on('upload', async (stream, data) => {
 		if (!data || !data.size || !data.path || !data.name) return;
+		if (!socket.handshake.session.permissions.file.includes(2)) return socket.nsp.to(userID).emit('error', NO_PERMISSIONS);
 
 		const path = cleanPath(data.path);
 		const name = data.name;
@@ -171,6 +172,7 @@ io.on('connection', (socket) => {
 
 	socket.on('download', async (data) => {
 		if (!data.path || !data.name) return;
+		if (!socket.handshake.session.permissions.file.includes(1)) return socket.nsp.to(userID).emit('error', NO_PERMISSIONS);
 
 		const path = cleanPath(data.path);
 		const name = data.name;
@@ -228,6 +230,7 @@ io.on('connection', (socket) => {
 
 	socket.on('delete', async (data) => {
 		if (!data.name) return;
+		if (!socket.handshake.session.permissions.file.includes(4)) return socket.nsp.to(userID).emit('error', NO_PERMISSIONS);
 
 		const path = cleanPath(data.path);
 		const name = data.name;
@@ -296,7 +299,7 @@ app
 	.get('/', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
 		const nodes = await getNodes(false, true);
-		const users = await getUsers();
+		const users = await getUsers(false);
 
 		return res.render('index', { nodes, users });
 	});

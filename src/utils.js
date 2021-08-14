@@ -69,7 +69,7 @@ const getNodes = async (skipNotConnected, skipConnectionDetails) => {
 	}
 };
 
-const getUsers = async () => {
+const getUsers = async (skipPermissions) => {
 	const all = await db.prepare('SELECT * FROM users;').all();
 	const users = [];
 
@@ -78,11 +78,17 @@ const getUsers = async () => {
 	for(let i = 0; i < all.length; i++) {
 		const user = all[i];
 
-		users.push({
+		const obj = {
 			id: user.id,
 			username: user.username,
 			email: user.email,
-		});
+		};
+
+		if (!skipPermissions) {
+			obj.permissions = user.permissions;
+		}
+
+		users.push(obj);
 
 		if (i == all.length - 1) {
 			return users;
@@ -90,9 +96,55 @@ const getUsers = async () => {
 	}
 };
 
+/*
+    filePermissions:
+    1: download files
+    2: upload files
+    4: delete files
+
+    nodePermissions:
+    1: edit node
+    2: add node
+    4: delete node
+
+    userPermissions:
+    1: edit user
+    2: -
+    4: delete user
+
+    777: everything
+*/
+const getPermissions = (number) => {
+	if (isNaN(number)) number = parseInt(number);
+
+	const userPermission = number % 10;
+	number = (number - userPermission) / 10;
+	const nodePermission = number % 10;
+	number = (number - nodePermission) / 10;
+	const filePermission = number % 10;
+
+	return {
+		file: permissionNumberToArray(filePermission),
+		node: permissionNumberToArray(nodePermission),
+		user: permissionNumberToArray(userPermission),
+	};
+};
+
+const permissionNumberToArray = (number) => {
+	if (number == 7) return [1, 2, 4];
+	if (number == 6) return [2, 4];
+	if (number == 5) return [1, 4];
+	if (number == 4) return [4];
+	if (number == 3) return [1, 2];
+	if (number == 2) return [2];
+	if (number == 1) return [1];
+	if (number == 0) return [];
+};
+
 module.exports = {
 	cleanPath,
 	connectToNode,
 	getNodes,
 	getUsers,
+	getPermissions,
 };

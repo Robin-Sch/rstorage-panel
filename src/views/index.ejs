@@ -38,6 +38,7 @@
                 <th>User ID</th>
                 <th>Username</th>
                 <th>Email</th>
+                <th>Permissions</th>
                 <th>Edit</th>
             </tr>
             <% users.forEach(user => { %>
@@ -45,6 +46,7 @@
                     <td><%=user.id%></td>
                     <td><%=user.username%></td>
                     <td><%=user.email%></td>
+                    <td><%=user.permissions%></td>
                     <td><button id="button" onclick="window.location.href = '/accounts/<%=user.id%>/edit'">Edit</button></td>
                 </tr>
             <% }); %>

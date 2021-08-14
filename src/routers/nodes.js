@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const { v4: uuidv4 } = require('uuid');
 
-const { INVALID_BODY, INVALID_NODE, SUCCESS } = require('../../responses.json');
+const { INVALID_BODY, INVALID_NODE, NO_PERMISSIONS, SUCCESS } = require('../../responses.json');
 const db = require('../sql.js');
 const { connectToNode } = require('../utils.js');
 
@@ -10,6 +10,7 @@ const router = Router();
 router
 	.get('/:id/edit/', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
+		if (!req.session.permissions.node.includes(1)) return res.status(403).render('error', { error: NO_PERMISSIONS, success: false });
 
 		const node = await db.prepare('SELECT * FROM nodes WHERE id = ?;').get([req.params.id]);
 		if (!node) return res.status(403).render('error', { error: INVALID_NODE });
@@ -25,6 +26,7 @@ router
 	})
 	.post('/:id/edit', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
+		if (!req.session.permissions.node.includes(1)) return res.status(403).json({ message: NO_PERMISSIONS, success: false });
 
 		const {
 			ip,
@@ -43,6 +45,7 @@ router
 	})
 	.post('/:id/delete', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
+		if (!req.session.permissions.node.includes(4)) return res.status(403).json({ message: NO_PERMISSIONS, success: false });
 
 		const node = await db.prepare('SELECT * FROM nodes WHERE id = ?;').get([req.params.id]);
 		if (!node) return res.status(403).json({ message: INVALID_NODE, success: false });
@@ -53,6 +56,7 @@ router
 	})
 	.post('/create', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
+		if (!req.session.permissions.node.includes(2)) return res.status(403).json({ message: NO_PERMISSIONS, success: false });
 
 		const {
 			ip,

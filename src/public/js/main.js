@@ -69,11 +69,13 @@ const userEdit = (id) => {
 	const username = document.getElementById('username').value;
 	const email = document.getElementById('email').value;
 	const password = document.getElementById('password').value;
+	const permissions = document.getElementById('permissions').value;
 
 	const body = {
 		username,
 		email,
 		password,
+		permissions,
 	};
 
 	fetch(`/accounts/${id}/edit`, {

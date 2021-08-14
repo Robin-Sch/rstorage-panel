@@ -5,7 +5,7 @@ const { hash } = require('bcrypt');
 
 const db = sqlite3(join(__dirname, 'database.db'));
 
-db.prepare('CREATE TABLE if not exists users (id TEXT, username TEXT, email TEXT, password TEXT, verified BOOL, secret TEXT);').run();
+db.prepare('CREATE TABLE if not exists users (id TEXT, username TEXT, email TEXT, password TEXT, verified BOOL, secret TEXT, permissions TEXT);').run();
 (async () => {
 	const adminUser = await db.prepare('SELECT * FROM users WHERE username = ?;').get(['admin']);
 	if (!adminUser) {
@@ -16,7 +16,8 @@ db.prepare('CREATE TABLE if not exists users (id TEXT, username TEXT, email TEXT
 		const id = uuidv4();
 		const verified = 'true';
 		const secret = undefined;
-		await db.prepare('INSERT INTO users (id, username, email, password, verified, secret) VALUES (?,?,?,?,?,?);').run([id, username, email, hashedPassword, verified, secret]);
+		const permissions = '777';
+		await db.prepare('INSERT INTO users (id, username, email, password, verified, secret, permissions) VALUES (?,?,?,?,?,?,?);').run([id, username, email, hashedPassword, verified, secret, permissions]);
 	}
 })();
 

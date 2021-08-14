@@ -15,13 +15,68 @@
                 <th>Username</th>
                 <th>Email</th>
                 <th>Password</th>
+                <th>Permissions</th>
             </tr>
             <tr>
                 <th><input type="text" id="username" name="username" placeholder="username" value="<%=details.username%>" required></th>
                 <th><input type="email" id="email" name="email" placeholder="email" value="<%=details.email%>" required></th>
-                <th><input type="password" id="password" placeholder="new password"></input></th>
+                <th><input type="password" id="password" placeholder="new password (empty = old one)"></input></th>
+                <th><input type="number" id="permissions" name="permissions" placeholder="permissions" value="<%=details.permissions%>" required></th>
                 <th><button id="button" onclick="userEdit('<%=details.id%>');">Save</button></th>
 				<th><button id="button" onclick="userDelete('<%=details.id%>');">Delete</button></th>
+            </tr>
+            <tr>
+            </tr>
+        </table>
+        <h1>Don't change permissions unless you know and understand what you're doing!</h1>
+        <h1>You're responsible if anything happens if you change the default permissions!</h1>
+        <h2>You shouldn't give others people access to your panel, because every file uploaded (by you) is accessable (with the correct permissions)!</h2>
+        <p>Permissions is an integer, containing 3 numbers. The first one is for how much permission they have on files, the second for nodes and the third for users (see table below). xxx means that it doesn't matter, as it's not implemented (yet).</p>
+        <p>So for example, if a user is allow to view files, view nodes and view users their permissions would be 000</p>
+        <p>So for example, if a user is allow to view + download files, view + add nodes and view + delete users their permissions would be 124</p>
+        <p>I recommend giving an admin view + download + upload + delete files, view + edit + add + delete nodes and view + edit + xxx + delete users (everything) (777).</p>
+        <p>I recommend giving "second users" (like a friend of yours) view + downloading + uploading files, view nodes and view users (300). Note: this includes YOUR files, so if you upload a file they can download it too (but you can download theirs too)!</p>
+        <p>In case you mess up (by removing edit users permissions from all the accounts, and then you can't change anyone's permissions anymore), you can edit the database and give the admin account 777, or you can delete the admin user it will be recreated after a panel restart (make sure to change the password)!</p>
+        <table>
+            <tr>
+                <th>0</th>
+                <th>1</th>
+                <th>2</th>
+                <th>3</th>
+                <th>4</th>
+                <th>5</th>
+                <th>6</th>
+                <th>7</th>
+            </tr>
+            <tr>
+                <th>View files</th>
+                <th>View + Download files</th>
+                <th>View + Upload files</th>
+                <th>View + Download + Upload files</th>
+                <th>View + Delete files</th>
+                <th>View + Download + Delete files</th>
+                <th>View + Upload + Delete files</th>
+                <th>View + Download + Upload + Delete files</th>
+            </tr>
+            <tr>
+                <th>View nodes</th>
+                <th>View + Edit nodes</th>
+                <th>View + Add nodes</th>
+                <th>View + Edit + Add nodes</th>
+                <th>View + Delete nodes</th>
+                <th>View + Edit + Delete nodes</th>
+                <th>View + Add + Delete nodes</th>
+                <th>View + Edit + Add + Delete nodes</th>
+            </tr>
+            <tr>
+                <th>View users</th>
+                <th>View + Edit users</th>
+                <th>View + xxx users (same as 0)</th> 
+                <th>View + Edit + xxx users (same as 1)</th>
+                <th>View + Delete users</th>
+                <th>View + Edit + Delete users</th>
+                <th>View + xxx + Delete users (same as 4)</th>
+                <th>View + Edit + xxx + Delete users (same as 5)</th>
             </tr>
         </table>
 
