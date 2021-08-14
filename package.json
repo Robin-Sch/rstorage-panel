@@ -1,11 +1,10 @@
 {
-	"name": "rstorage",
+	"name": "rstorage-panel",
 	"version": "0.0.1",
 	"description": "RStorage is an encrypted cloud file storage.",
-	"main": "panel/index.js",
+	"main": "src/index.js",
 	"scripts": {
-		"start-panel": "node panel/index.js",
-		"start-node": "node node/index.js"
+		"start": "node ."
 	},
 	"keywords": [],
 	"author": "Robin",
@@ -17,7 +16,6 @@
 		"dotenv": "^10.0.0",
 		"ejs": "^3.1.6",
 		"express": "^4.17.1",
-		"express-fileupload": "^1.2.1",
 		"express-session": "^1.17.2",
 		"fs": "^0.0.1-security",
 		"http": "^0.0.1-security",

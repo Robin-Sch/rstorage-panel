@@ -1,7 +1,6 @@
 require('dotenv').config();
 
 const express = require('express');
-const fileUpload = require('express-fileupload');
 const session = require('express-session');
 const passport = require('passport');
 const { join } = require('path');
@@ -46,9 +45,9 @@ const sessionHandler = session({
 
 const panel_port = PANEL_PORT || 3000;
 
-if (!existsSync(join(__dirname, 'keys'))) mkdirSync(join(__dirname, 'keys'));
-let SERVER_PRIVATE_KEY = existsSync(join(__dirname, 'keys/rsa_key')) ? readFileSync(join(__dirname, 'keys/rsa_key'), 'utf8') : null;
-let SERVER_PUBLIC_KEY = existsSync(join(__dirname, 'keys/rsa_key.pub')) ? readFileSync(join(__dirname, 'keys/rsa_key.pub'), 'utf8') : null;
+if (!existsSync(join(__dirname, '../', 'keys'))) mkdirSync(join(__dirname, '../', 'keys'));
+let SERVER_PRIVATE_KEY = existsSync(join(__dirname, '../', 'keys/rsa_key')) ? readFileSync(join(__dirname, '../', 'keys/rsa_key'), 'utf8') : null;
+let SERVER_PUBLIC_KEY = existsSync(join(__dirname, '../', 'keys/rsa_key.pub')) ? readFileSync(join(__dirname, '../', 'keys/rsa_key.pub'), 'utf8') : null;
 
 if (!SERVER_PRIVATE_KEY || !SERVER_PUBLIC_KEY) {
 	const keys = generateKeys();
@@ -56,8 +55,8 @@ if (!SERVER_PRIVATE_KEY || !SERVER_PUBLIC_KEY) {
 	SERVER_PRIVATE_KEY = keys.private;
 	SERVER_PUBLIC_KEY = keys.public;
 
-	writeFileSync(join(__dirname, 'keys/rsa_key'), SERVER_PRIVATE_KEY);
-	writeFileSync(join(__dirname, 'keys/rsa_key.pub'), SERVER_PUBLIC_KEY);
+	writeFileSync(join(__dirname, '../', 'keys/rsa_key'), SERVER_PRIVATE_KEY);
+	writeFileSync(join(__dirname, '../', 'keys/rsa_key.pub'), SERVER_PUBLIC_KEY);
 }
 
 passport.serializeUser(function(user, done) {
@@ -285,7 +284,6 @@ io.on('connection', (socket) => {
 app
 	.use(express.json({ limit: '100mb' }))
 	.use(express.urlencoded({ limit: '100mb', extended: true }))
-	.use(fileUpload())
 	.use(sessionHandler)
 	.use(express.static(join(__dirname, 'public')))
 	.set('views', join(__dirname, 'views'))

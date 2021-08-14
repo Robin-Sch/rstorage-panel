@@ -2,19 +2,21 @@
 
 RStorage is an encrypted cloud file storage.
 
+To not confuse things, `node`, or `Node` means `rstorage-node` or `RStorage Node`, and `nodejs` means [`node.js`](https://nodejs.org/).
+
 ## How does RStorage work?
 
-#### Panel
+### Panel
 
-You have **one** panel, which is like the "master", server-side encryption and decryption happens on this one, so you probably want to host this at your own PC, or on a high secured server. 
+You have **one** panel, which is like the "master", server-side encryption and decryption happens on this one, so you probably want to host this at your own PC, or on a high secured server.
 
 The panel should have a lot of CPU power, as file encryption and decryption is done here.
 
-You can have one node, but also multiple nodes connected to one panel (this is recommended, the file will be spread over all the connected node(s) (See `PANEL_FORCE_SPREADING` below))
+You can have one node, but also multiple nodes connected to one panel (this is recommended, the file will be spread over all the connected node(s) (See `PANEL_FORCE_SPREADING` below)).
 
-#### Node
+### Node
 
-You can have as many nodes as you want, and here are the encrypted files stored. These can be run on anything, your PC, a server, a server of your friend etc. etc.. The files are encrypted and the decryption key is only known to the panel. However, you should still secure this. 
+You can have as many nodes as you want, and here are the encrypted files stored. These can be run on anything, your PC, a server, a server of your friend etc. etc.. The files are encrypted and the decryption key is only known to the panel. However, you should still secure this.
 
 A node should have a lot of disk storage, as the encrypted files are stored here.
 
@@ -30,27 +32,58 @@ You can help by looking at the what has to be done section down below, or search
 
 Install [nodejs](https://nodejs.org/en/download/) (if not done already previously).
 
-Rename `.env.example` to `.env`, and fill in the environment variables. Fill in the variables starting with `PANEL_` if you want to install the panel, and fill in the variables starting with `NODE_` if you want to install a node. (To avoid confusion, you could delete the `panel` or `node` folder if you're using the other one).
+### Node
+```
+git clone https://github.com/Robin-floss/rstorage-node
+cd rstorage-node
+npm i
+```
 
-If this is your first time, temporarily set `PANEL_DISABLE_REGISTER` to `false`, in order to register your account. **AFTER REGISTERING, MAKE SURE TO SET IT BACK TO TRUE AND RESTART THE PANEL!**
+Rename `.env.example` to `.env`, and fill in the environment variables.
 
-Optionally: you can install both if you want, although it's not recommended. For more security host the panel and the node on a separate server. Or even host multiple nodes (which all can be connected to the same panel, and your files will be spread over them)!
+```
+npm start
+```
 
-Run `npm i` to install the dependencies.
+### Panel
+```
+git clone https://github.com/Robin-floss/rstorage-panel
+cd rstorage-panel
+npm i
+```
+
+Rename `.env.example` to `.env`, and fill in the environment variables.
+
+Set `PANEL_DISABLE_REGISTER` to `false`, in order to register your account. If you have set this to `false`, ANYONE can register and access the files and nodes, so make sure to set it back to true after you're done.
+
+```
+npm start
+```
+
+Go to your panel (`localhost:3000` by default) and register your first account (if not done already).
+
+Set `PANEL_DISABLE_REGISTER` to `true`.
+
+```
+npm start
+```
 
 ## Usage
-
-If not done already, set `PANEL_DISABLE_REGISTER` to `false`, and register your first account. **After that set it back to `true` and make sure to restart the panel!** (if registering is enabled, ANYONE can register and access the files and nodes)
-
-Run `npm run start-panel` to start the RStorage panel.
-
-Run `npm run start-node` to start a node (note: a node can be hosted on a different server (which is recommended for better security)).
+### Node
+```
+npm start
+```
 
 Go to your node (`localhost:3001` by default) and copy the public key.
 
-Go to your panel (`localhost:3000` by default), login, and paste the public key (and change the ip/port if you have changed that). If you want to add more nodes, repeat the same steps (installation => copying => pasting).
+### Panel
+```
+npm start
+```
 
 Play around with `PANEL_MAX_SIZE` in the environment variables if you're getting out of memory crashes (set it lower until you get no crashes anymore).
+
+Go to your panel (`localhost:3000` by default), login, and paste the public key (and change the ip/port if you have changed that). If you want to add more nodes, repeat the same steps (installation => copying => pasting).
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
@@ -83,12 +116,11 @@ Please make sure to update tests as appropriate.
 		* [ ] worker threads?
 		* [ ] encrypting on client?
 	* [x] spread file contents randomly over all nodes
-	* [ ] tests
+* tests
+	* [ ] node tests
+	* [ ] panel tests
 
 ## Environment variables
-* PANEL_MONGODB
-	* This is the connection URL to a mongodb instance.
-
 * PANEL_MAX_SIZE (Default: 8) (in megabytes)
 	* This is the maximum size (in megabytes) a (decrypted) file part should be. If set to 8, that means if a file is between 8 and 16 mb, there will be 2 file parts (useful for changing if your server has a lot of memory, or if you want to spread the file more) (the lower it is, the more the file will be spread).
 

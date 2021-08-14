@@ -18,7 +18,7 @@ const connectToNode = async (ip, port, publickey) => {
 	try {
 
 		const body = {
-			publickey: existsSync(join(__dirname, 'keys/rsa_key.pub')) ? readFileSync(join(__dirname, 'keys/rsa_key.pub'), 'utf8') : null,
+			publickey: existsSync(join(__dirname, '../', 'keys/rsa_key.pub')) ? readFileSync(join(__dirname, '../', 'keys/rsa_key.pub'), 'utf8') : null,
 		};
 		const encryptedbody = pack(publickey, body);
 
