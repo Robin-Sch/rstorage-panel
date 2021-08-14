@@ -65,6 +65,43 @@ const nodeDelete = (id) => {
 		});
 };
 
+const userEdit = (id) => {
+	const username = document.getElementById('username').value;
+	const email = document.getElementById('email').value;
+	const password = document.getElementById('password').value;
+
+	const body = {
+		username,
+		email,
+		password,
+	};
+
+	fetch(`/accounts/${id}/edit`, {
+		method: 'POST',
+		body: JSON.stringify(body),
+		headers: { 'Content-Type': 'application/json' },
+	}).then(res => res.json())
+		.then(json => {
+			if (!json.success) return error(true, json.message);
+			else return window.location.href = '/';
+		}).catch(() => {
+			return error(true, 'There are problems connecting to the server!');
+		});
+}
+
+const userDelete = (id) => {
+	fetch(`/accounts/${id}/delete`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+	}).then(res => res.json())
+		.then(json => {
+			if (!json.success) return error(true, json.message);
+			else return window.location.href = '/';
+		}).catch(() => {
+			return error(true, 'There are problems connecting to the server!');
+		});
+}
+
 const fileDelete = (path, name) => {
 	return socket.emit('delete', { path, name });
 };

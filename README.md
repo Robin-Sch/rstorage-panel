@@ -54,19 +54,13 @@ npm i
 
 Rename `.env.example` to `.env`, and fill in the environment variables.
 
-Set `PANEL_DISABLE_REGISTER` to `false`, in order to register your account. If you have set this to `false`, ANYONE can register and access the files and nodes, so make sure to set it back to true after you're done.
-
 ```
 npm start
 ```
 
-Go to your panel (`localhost:3000` by default) and register your first account (if not done already).
+Go to your panel (`localhost:3000` by default) and login with email `admin` and password `admin`.
 
-Set `PANEL_DISABLE_REGISTER` to `true`.
-
-```
-npm start
-```
+**MAKE SURE TO CHANGE DEFAULT PASSWORD** (and if you want username/email too)!
 
 ## Usage
 ### Node
@@ -95,7 +89,8 @@ Please make sure to update tests as appropriate.
 * login system
 	* [x] basic login system
 	* [x] 2fa
-	* [ ] user management for admin
+	* [x] user management
+	* [ ] user permissions
 	* [ ] email verification + password reset
 * connecting node to panel
 	* [x] generating key pair on both panel and node

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>RStorage panel</title>
+		<link rel="stylesheet" href="/css/index.css">
+		<script src="/js/download.min.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+		<script src="/js/main.js"></script>
+        <script src="/js/socket.js"></script>
+	</head>
+    <body>
+        <table>
+            <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Password</th>
+            </tr>
+            <tr>
+                <th><input type="text" id="username" name="username" placeholder="username" value="<%=details.username%>" required></th>
+                <th><input type="email" id="email" name="email" placeholder="email" value="<%=details.email%>" required></th>
+                <th><input type="password" id="password" placeholder="new password"></input></th>
+                <th><button id="button" onclick="userEdit('<%=details.id%>');">Save</button></th>
+				<th><button id="button" onclick="userDelete('<%=details.id%>');">Delete</button></th>
+            </tr>
+        </table>
+
+        <p id="response" style="color: red"></p>
+    </body>
+</html>

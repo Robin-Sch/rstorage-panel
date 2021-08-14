@@ -22,7 +22,6 @@
                 <tr>
                     <td><%=node.id%></td>
                     <td><%=node.connected%></td>
-                    <!-- <td><button id="button" onclick="window.location.href = '/files/<%=node.id%>/view?path=/'" <% if (!node.connected) { %> disabled <% } %>>Files</button></td> -->
                     <td><button id="button" onclick="window.location.href = '/nodes/<%=node.id%>/edit'">Edit</button></td>
                 </tr>
             <% }); %>
@@ -33,6 +32,22 @@
                 <th><textarea type="test" id="publickey" name="publickey" placeholder="publickey" required></textarea></th>
                 <th><button id="button" onclick="nodeCreate();">Add</button></th>
             </tr>
+        </table>
+        <table>
+            <tr>
+                <th>User ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Edit</th>
+            </tr>
+            <% users.forEach(user => { %>
+                <tr>
+                    <td><%=user.id%></td>
+                    <td><%=user.username%></td>
+                    <td><%=user.email%></td>
+                    <td><button id="button" onclick="window.location.href = '/accounts/<%=user.id%>/edit'">Edit</button></td>
+                </tr>
+            <% }); %>
         </table>
         <p id="response" style="color: red"></p>
     </body>

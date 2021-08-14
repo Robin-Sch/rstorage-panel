@@ -4,6 +4,7 @@ const { compare, hash } = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
 
 const db = require('../sql.js');
+const { INVALID_USER, SUCCESS } = require('../../responses.json');
 
 const {
 	PANEL_DISABLE_REGISTER,
@@ -16,6 +17,53 @@ if (PANEL_DISABLE_REGISTER.toLowerCase() == 'false') DISABLE_REGISTER = false;
 const router = Router();
 
 router
+	.get('/:id/edit/', async (req, res) => {
+		if (!req.session.loggedin) return res.redirect('/login');
+
+		const user = await db.prepare('SELECT * FROM users WHERE id = ?;').get([req.params.id]);
+		if (!user) return res.status(403).render('error', { error: INVALID_USER });
+
+		const details = {
+			id: user.id,
+			username: user.username,
+			email: user.email,
+			password: user.password,
+		};
+
+		return res.status(200).render('user', { details });
+	})
+	.post('/:id/edit/', async (req, res) => {
+		if (!req.session.loggedin) return res.redirect('/login');
+
+		const {
+			username,
+			email,
+			password,
+		} = req.body;
+
+		const user = await db.prepare('SELECT * FROM users WHERE id = ?;').get([req.params.id]);
+		if (!user) return res.status(403).json({ message: INVALID_USER, success: false });
+
+		let hashedPassword = user.password;
+
+		if (password !== '') {
+			hashedPassword = await hash(password, 10);
+		}
+
+		await db.prepare('UPDATE users SET username = ?, email = ?, password = ? WHERE id = ?;').run([username, email, hashedPassword, req.params.id]);
+
+		return res.status(200).json({ message: SUCCESS, success: true });
+	})
+	.post('/:id/delete/', async (req, res) => {
+		if (!req.session.loggedin) return res.redirect('/login');
+
+		const user = await db.prepare('SELECT * FROM users WHERE id = ?;').get([req.params.id]);
+		if (!user) return res.status(403).json({ message: INVALID_USER, success: false });
+
+		await db.prepare('DELETE FROM users WHERE id = ?;').run([req.params.id]);
+
+		return res.status(200).json({ message: SUCCESS, success: true });
+	})
 	.post('/login', async (req, res) => {
 		const {
 			email,

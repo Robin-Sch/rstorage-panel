@@ -21,7 +21,7 @@ router
 			publickey: node.publickey,
 		};
 
-		return res.status(200).render('edit', { details });
+		return res.status(200).render('node', { details });
 	})
 	.post('/:id/edit', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
@@ -37,7 +37,7 @@ router
 		const node = await db.prepare('SELECT * FROM nodes WHERE id = ?;').get([req.params.id]);
 		if (!node) return res.status(403).json({ message: INVALID_NODE, success: false });
 
-		await db.prepare('UPDATE NODES SET ip = ?, port = ?, publickey = ? WHERE id = ?').run([ip, port, publickey, req.params.id]);
+		await db.prepare('UPDATE nodes SET ip = ?, port = ?, publickey = ? WHERE id = ?').run([ip, port, publickey, req.params.id]);
 
 		return res.status(200).json({ message: SUCCESS, success: true });
 	})
@@ -47,7 +47,7 @@ router
 		const node = await db.prepare('SELECT * FROM nodes WHERE id = ?;').get([req.params.id]);
 		if (!node) return res.status(403).json({ message: INVALID_NODE, success: false });
 
-		await db.prepare('DELETE* FROM nodes WHERE id = ?;').run([req.params.id]);
+		await db.prepare('DELETE FROM nodes WHERE id = ?;').run([req.params.id]);
 
 		return res.status(200).json({ message: SUCCESS, success: true });
 	})

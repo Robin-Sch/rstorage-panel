@@ -15,7 +15,7 @@ const io = require('socket.io')(http);
 const ss = require('socket.io-stream');
 
 const { generateKeys, unpack, pack, encrypt, decrypt } = require('./crypt.js');
-const { cleanPath, getNodes } = require('./utils.js');
+const { cleanPath, getNodes, getUsers } = require('./utils.js');
 const db = require('./sql.js');
 const { ALREADY_SUCH_FILE_OR_DIR, NO_SUCH_FILE_OR_DIR, NO_NODES } = require('../responses.json');
 
@@ -91,7 +91,7 @@ io.on('connection', (socket) => {
 		const exists = await db.prepare('SELECT DISTINCT(name) FROM files WHERE path = ? AND name = ?;').get([path, name]);
 		if (exists) return socket.nsp.to(userID).emit('error', ALREADY_SUCH_FILE_OR_DIR);
 
-		const nodes = await getNodes(true);
+		const nodes = await getNodes(true, false);
 		if (!nodes || nodes.length == 0) return socket.nsp.to(userID).emit('error', NO_NODES);
 
 		const fileID = uuidv4();
@@ -295,9 +295,10 @@ app
 	.get('/login', async (req, res) => res.render('login', { disable_register: DISABLE_REGISTER }))
 	.get('/', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
-		const nodes = await getNodes(false);
+		const nodes = await getNodes(false, true);
+		const users = await getUsers();
 
-		return res.render('index', { nodes });
+		return res.render('index', { nodes, users });
 	});
 
 http.listen(panel_port, (err) => {

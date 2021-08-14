@@ -38,7 +38,7 @@ const connectToNode = async (ip, port, publickey) => {
 	}
 };
 
-const getNodes = async (skipNotConnected) => {
+const getNodes = async (skipNotConnected, skipConnectionDetails) => {
 	const all = await db.prepare('SELECT * FROM nodes;').all();
 	const nodes = [];
 
@@ -50,13 +50,42 @@ const getNodes = async (skipNotConnected) => {
 
 		if (skipNotConnected && !status.success) continue;
 
-		nodes.push({
+		const obj = {
 			id: node.id,
 			connected: status.success,
-		});
+		};
+
+		if (!skipConnectionDetails) {
+			obj.ip = node.ip;
+			obj.port = node.port;
+			obj.publickey = node.publickey;
+		}
+
+		nodes.push(obj);
 
 		if (i == all.length - 1) {
 			return nodes;
+		}
+	}
+};
+
+const getUsers = async () => {
+	const all = await db.prepare('SELECT * FROM users;').all();
+	const users = [];
+
+	if (!all || all.length == 0) return users;
+
+	for(let i = 0; i < all.length; i++) {
+		const user = all[i];
+
+		users.push({
+			id: user.id,
+			username: user.username,
+			email: user.email,
+		});
+
+		if (i == all.length - 1) {
+			return users;
 		}
 	}
 };
@@ -65,4 +94,5 @@ module.exports = {
 	cleanPath,
 	connectToNode,
 	getNodes,
+	getUsers,
 };
