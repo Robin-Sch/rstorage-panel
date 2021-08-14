@@ -1,8 +1,7 @@
 const { Router } = require('express');
 
 const { cleanPath } = require('../utils.js');
-
-const PartModel = require('../mongodb/PartModel.js');
+const db = require('../sql.js');
 
 const router = Router();
 
@@ -12,8 +11,9 @@ router
 
 		const path = cleanPath(req.query.path);
 
-		const files = await PartModel.find({ path }).distinct('name');
-		const directories = await PartModel.find({ 'path': { $regex: `^${path}` } }).ne('path', path).distinct('path');
+		const files = await db.prepare('SELECT DISTINCT(name) FROM files WHERE path = ?;').all([path]) || [];
+		// TODO AND NOT path like "?%" or something like that?
+		const directories = await db.prepare('SELECT DISTINCT(path) FROM files WHERE NOT path = ?;').all([path]) || [];
 
 		return res.status(200).render('files', { path, files, directories });
 	});

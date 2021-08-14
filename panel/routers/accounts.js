@@ -1,9 +1,9 @@
 const { Router } = require('express');
 const speakeasy = require('speakeasy');
 const { compare, hash } = require('bcrypt');
-const { Types } = require('mongoose');
+const { v4: uuidv4 } = require('uuid');
 
-const UserModel = require('../mongodb/UserModel.js');
+const db = require('../sql.js');
 
 const {
 	PANEL_DISABLE_REGISTER,
@@ -24,7 +24,7 @@ router
 		} = req.body;
 		if (!email || !password) return res.json({ message: 'Please enter Email and Password!', success: false });
 
-		const user = await UserModel.findOne({ email: email });
+		const user = await db.prepare('SELECT * FROM users WHERE email = ?;').get([email]);
 		if (!user) return res.json({ message: 'Incorrect Email and/or Password!', success: false });
 
 		// if (!user.verified) return res.json({ message: 'Please reregister, you haven\'t verified your 2fa!', success: false });
@@ -43,7 +43,7 @@ router
 		if (await compare(password, user.password)) {
 			req.session.loggedin = true;
 			req.session.username = user.username;
-			req.session.userID = user._id;
+			req.session.userID = user.id;
 
 			return res.json({ message: 'Correct', success: true });
 		} else {
@@ -62,8 +62,8 @@ router
 		if (!email || !password || !username || totp == undefined) return res.json({ message: 'Please enter Email, Username and Password!', success: false });
 
 		const alreadyRegistered = {
-			email: await UserModel.findOne({ email: email }),
-			username: await UserModel.findOne({ username: username }),
+			email: await db.prepare('SELECT * FROM users WHERE email = ?;').get([email]),
+			username: await db.prepare('SELECT * FROM users WHERE username = ?;').get([username]),
 		};
 		if (alreadyRegistered.email) return res.json({ message: 'That email is already registered!', success: false });
 		if (alreadyRegistered.username) return res.json({ message: 'That username is already registered!', success: false });
@@ -74,27 +74,18 @@ router
 		}
 
 		const hashedPassword = await hash(password, 10);
+		const id = uuidv4();
+		const verified = secret ? 'false' : 'true';
 
-		const schema = new UserModel({
-			_id: new Types.ObjectId(),
-			username,
-			email,
-			password: hashedPassword,
-			verified: secret ? false : true,
-			secret,
-		});
+		await db.prepare('INSERT INTO users (id, username, email, password, verified, secret) VALUES (?,?,?,?,?,?);').run([id, username, email, hashedPassword, verified, secret]);
 
-		schema.save().then(() => {
-			if (!secret) req.session.loggedin = true;
-			if (!secret) req.session.username = username;
-			if (!secret) req.session.userID = schema._id;
+		if (!secret) req.session.loggedin = true;
+		if (!secret) req.session.username = username;
+		if (!secret) req.session.userID = id;
 
-			const json = { message: 'Correct', success: true };
-			if (secret) json.secret = secret;
-			return res.json(json);
-		}).catch(() => {
-			return res.redirect('/register');
-		});
+		const json = { message: 'Correct', success: true };
+		if (secret) json.secret = secret;
+		return res.json(json);
 	})
 	.post('/totp-verify', async (req, res) => {
 		const {
@@ -103,7 +94,7 @@ router
 		} = req.body;
 		if (!token || !email) return res.json({ message: 'Please enter the token!', success: false });
 
-		const user = await UserModel.findOne({ email: email });
+		const user = await db.prepare('SELECT * FROM users WHERE email = ?;').get([email]);
 		if (!user) return res.json({ message: 'That email is not registered!', success: false });
 
 		const verified = speakeasy.totp.verify({
@@ -119,7 +110,7 @@ router
 
 			req.session.loggedin = true;
 			req.session.username = user.username;
-			req.session.userID = user._id;
+			req.session.userID = user.id;
 
 			return res.json({ success: true });
 		} else {

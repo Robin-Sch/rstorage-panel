@@ -5,4 +5,5 @@ rsa_key
 rsa_key.pub
 server_rsa_key.pub
 key
+database.db
 node/files/*

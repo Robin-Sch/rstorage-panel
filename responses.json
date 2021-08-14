@@ -6,6 +6,7 @@
 	"ALREADY_SUCH_FILE_OR_DIR": "That file or directory does already exists!",
 	"INVALID_BODY": "You sent an incomplete or wrong request body (you probably want to try again)!",
 	"INVALID_NODE": "No node with that ID found!",
+	"NO_NODES": "There are no nodes connected!",
 	"PROBLEMS_CONNECTING_NODE": "There are problems connecting to the node, please try again!",
 	"SUCCESS": "Success!"
 }

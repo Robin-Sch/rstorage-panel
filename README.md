@@ -2,15 +2,29 @@
 
 RStorage is an encrypted cloud file storage.
 
-You have one panel, which is like the "master", and then you can have multiple nodes (or one if you want) which is where the files are stored.
+## How does RStorage work?
 
-Uploading/Downloading takes some time, this is because of the encryption and decryption part. It depends on the CPU of your panel server.
+#### Panel
 
-You would want to host the panel on a high amount of CPU cores and RAM server (file encryption and decryption happens here), and the node(s) on a server with a big disk.
+You have **one** panel, which is like the "master", server-side encryption and decryption happens on this one, so you probably want to host this at your own PC, or on a high secured server. 
+
+The panel should have a lot of CPU power, as file encryption and decryption is done here.
+
+You can have one node, but also multiple nodes connected to one panel (this is recommended, the file will be spread over all the connected node(s) (See `PANEL_FORCE_SPREADING` below))
+
+#### Node
+
+You can have as many nodes as you want, and here are the encrypted files stored. These can be run on anything, your PC, a server, a server of your friend etc. etc.. The files are encrypted and the decryption key is only known to the panel. However, you should still secure this. 
+
+A node should have a lot of disk storage, as the encrypted files are stored here.
+
+**I'm not taking any responsibilty for lost files, hacked files or any problems with RStorage. You're the owner of your data, not me. This is just a tool to help you.**
+
+You should always keep a (encrypted) backup, and for sensitive files always use something like [gpg](https://gnupg.org/) or another encryption program.
 
 Note: RStorage isn't done yet, and won't function properly. Every update could break your previous installation and (as of right now) it's recommended that you reinstall everything if a new update comes out, as there's no guarantee for backwards compatibility.
 
-You could help by looking at the what has to be done section down below and creating a PR/issue. For new suggestions please open an issue first.
+You can help by looking at the what has to be done section down below, or search for `TODO` in the code. For new suggestions please open an issue first.
 
 ## Installation
 
@@ -63,11 +77,13 @@ Please make sure to update tests as appropriate.
 		* [x] downloading files
 		* [x] creating directories
 		* [x] download/upload progress
+		* [ ] sharing files?
 	* encrypting files
 		* [x] encrypting on server
-		* [x] big file encryption
+		* [ ] worker threads?
 		* [ ] encrypting on client?
 	* [x] spread file contents randomly over all nodes
+	* [ ] tests
 
 ## Environment variables
 * PANEL_MONGODB

@@ -1,8 +1,9 @@
 const { Router } = require('express');
-
-const NodeModel = require('../mongodb/NodeModel.js');
+const { v4: uuidv4 } = require('uuid');
 
 const { INVALID_BODY, INVALID_NODE, SUCCESS } = require('../../responses.json');
+const db = require('../sql.js');
+const { connectToNode } = require('../utils.js');
 
 const router = Router();
 
@@ -10,11 +11,11 @@ router
 	.get('/:id/edit/', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
 
-		const node = await NodeModel.findById(req.params.id);
+		const node = await db.prepare('SELECT * FROM nodes WHERE id = ?;').get([req.params.id]);
 		if (!node) return res.status(403).render('error', { error: INVALID_NODE });
 
 		const details = {
-			id: node._id,
+			id: node.id,
 			ip: node.ip,
 			port: node.port,
 			publickey: node.publickey,
@@ -33,25 +34,38 @@ router
 
 		if (!ip || !port || !publickey) return res.status(400).json({ message: INVALID_BODY, success: false });
 
-		const node = await NodeModel.findById(req.params.id);
+		const node = await db.prepare('SELECT * FROM nodes WHERE id = ?;').get([req.params.id]);
 		if (!node) return res.status(403).json({ message: INVALID_NODE, success: false });
 
-		node.ip = ip;
-		node.port = port;
-		node.publickey = publickey;
-
-		await node.save();
+		await db.prepare('UPDATE NODES SET ip = ?, port = ?, publickey = ? WHERE id = ?').run([ip, port, publickey, req.params.id]);
 
 		return res.status(200).json({ message: SUCCESS, success: true });
 	})
 	.post('/:id/delete', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
 
-		const node = await NodeModel.findById(req.params.id);
+		const node = await db.prepare('SELECT * FROM nodes WHERE id = ?;').get([req.params.id]);
 		if (!node) return res.status(403).json({ message: INVALID_NODE, success: false });
 
-		await NodeModel.deleteOne({ _id: req.params.id });
+		await db.prepare('DELETE* FROM nodes WHERE id = ?;').run([req.params.id]);
 
+		return res.status(200).json({ message: SUCCESS, success: true });
+	})
+	.post('/create', async (req, res) => {
+		if (!req.session.loggedin) return res.redirect('/login');
+
+		const {
+			ip,
+			port,
+			publickey,
+		} = req.body;
+
+		if (!ip || !port || !publickey) return res.status(400).json({ message: INVALID_BODY, success: false });
+
+		const status = await connectToNode(ip, port, publickey);
+		if (status.success == false) return res.status(400).json(status);
+
+		await db.prepare('INSERT INTO nodes (id, ip, port, publickey) VALUES (?,?,?,?);').run([uuidv4(), ip, port, publickey]);
 		return res.status(200).json({ message: SUCCESS, success: true });
 	});
 

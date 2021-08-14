@@ -3,12 +3,12 @@ require('dotenv').config();
 const express = require('express');
 const fileUpload = require('express-fileupload');
 const session = require('express-session');
-const { connect, Types } = require('mongoose');
 const passport = require('passport');
 const { join } = require('path');
 const { readFileSync, writeFileSync, existsSync, mkdirSync } = require('fs');
 const fetch = require('node-fetch');
 const randomstring = require('randomstring');
+const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 const http = require('http').createServer(app);
@@ -16,18 +16,15 @@ const io = require('socket.io')(http);
 const ss = require('socket.io-stream');
 
 const { generateKeys, unpack, pack, encrypt, decrypt } = require('./crypt.js');
-const { cleanPath } = require('./utils.js');
-const { INVALID_BODY, PROBLEMS_CONNECTING_NODE, ALREADY_SUCH_FILE_OR_DIR, SUCCESS } = require('../responses.json');
-
-const NodeModel = require('./mongodb/NodeModel.js');
-const PartModel = require('./mongodb/PartModel.js');
+const { cleanPath, getNodes } = require('./utils.js');
+const db = require('./sql.js');
+const { ALREADY_SUCH_FILE_OR_DIR, NO_SUCH_FILE_OR_DIR, NO_NODES } = require('../responses.json');
 
 const accountsRouter = require('./routers/accounts.js');
 const nodesRouter = require('./routers/nodes.js');
 const filesRouter = require('./routers/files.js');
 
 const {
-	PANEL_MONGODB,
 	PANEL_PORT,
 	PANEL_MAX_SIZE,
 	PANEL_FORCE_SPREADING,
@@ -63,12 +60,6 @@ if (!SERVER_PRIVATE_KEY || !SERVER_PUBLIC_KEY) {
 	writeFileSync(join(__dirname, 'keys/rsa_key.pub'), SERVER_PUBLIC_KEY);
 }
 
-connect(PANEL_MONGODB, {
-	useNewUrlParser: true,
-	useUnifiedTopology: true,
-	useFindAndModify: false,
-});
-
 passport.serializeUser(function(user, done) {
 	done(null, user);
 });
@@ -98,10 +89,15 @@ io.on('connection', (socket) => {
 		let received = Buffer.from('');
 		let receivedAmount = 0;
 
-		const exists = await PartModel.findOne({ path, name });
+		const exists = await db.prepare('SELECT DISTINCT(name) FROM files WHERE path = ? AND name = ?;').get([path, name]);
 		if (exists) return socket.nsp.to(userID).emit('error', ALREADY_SUCH_FILE_OR_DIR);
 
-		const nodes = await NodeModel.find({ });
+		const nodes = await getNodes(true);
+		if (!nodes || nodes.length == 0) return socket.nsp.to(userID).emit('error', NO_NODES);
+
+		const fileID = uuidv4();
+
+		await db.prepare('INSERT INTO files (id, name, path) VALUES (?,?,?);').run([fileID, name, path]);
 
 		let loops = Math.ceil(size / 1000 / 1000 / PANEL_MAX_SIZE);
 		if (FORCE_SPREADING && loops < nodes.length) loops = nodes.length;
@@ -132,7 +128,7 @@ io.on('connection', (socket) => {
 			await socket.nsp.to(userID).emit('message', `[upload] ${path}${name} encrypting (${curloop + 1}/${loops})`);
 
 			const content = encrypt(dataForThisLoop);
-			const id = new Types.ObjectId();
+			const id = uuidv4();
 
 			const body = {
 				content,
@@ -158,15 +154,8 @@ io.on('connection', (socket) => {
 						// TODO: delete all uploaded parts, and throw error?
 						return socket.nsp.to(userID).emit('message', `[upload] ${path}${name} failed (${curloop + 1}/${loops})`);
 					} else {
-						const part = new PartModel({
-							_id: id,
-							node: nodeForThisLoop._id,
-							name,
-							path,
-							index: curloop,
-						});
+						await db.prepare('INSERT INTO parts (id, file, node, i) VALUES (?,?,?,?);').run([id, fileID, nodeForThisLoop.id, curloop]);
 
-						await part.save();
 						socket.nsp.to(userID).emit('message', `[upload] ${path}${name} done (${curloop + 1}/${loops})`);
 
 						if(curloop == loops - 1) {
@@ -189,18 +178,22 @@ io.on('connection', (socket) => {
 
 		const buffers = [];
 
-		const parts = await PartModel.find({ path, name }).sort('index');
+		const file = await db.prepare('SELECT * FROM files WHERE path = ? AND name = ?;').get([path, name]);
+		if (!file) return socket.nsp.to(userID).emit('error', NO_SUCH_FILE_OR_DIR);
+
+		const parts = await db.prepare('SELECT * FROM parts WHERE file = ? ORDER BY i;').all(file.id);
+		if (!parts || parts.length == 0) return socket.nsp.to(userID).emit('error', NO_SUCH_FILE_OR_DIR);
 
 		for(let i = 0; i < parts.length; i++) {
 			const part = parts[i];
 
 			const body = {
-				id: part._id,
+				id: part.id,
 			};
 
 			await socket.nsp.to(userID).emit('message', `[download] ${path}${name} preparing (${i + 1}/${parts.length})`);
 
-			const node = await NodeModel.findById(part.node);
+			const node = await db.prepare('SELECT * FROM nodes WHERE id = ?;').get([part.node]);
 
 			const encryptedbody = pack(node.publickey, body);
 
@@ -240,16 +233,20 @@ io.on('connection', (socket) => {
 		const path = cleanPath(data.path);
 		const name = data.name;
 
-		const parts = await PartModel.find({ path, name });
+		const file = await db.prepare('SELECT * FROM files WHERE path = ? AND name = ?;').get([path, name]);
+		if (!file) return socket.nsp.to(userID).emit('error', NO_SUCH_FILE_OR_DIR);
+
+		const parts = await db.prepare('SELECT * FROM parts WHERE file = ? ORDER BY i;').all(file.id);
+		if (!parts || parts.length == 0) return socket.nsp.to(userID).emit('error', NO_SUCH_FILE_OR_DIR);
 
 		for(let i = 0; i < parts.length; i++) {
 			const part = parts[i];
 
 			const body = {
-				id: part._id,
+				id: part.id,
 			};
 
-			const node = await NodeModel.findById(part.node);
+			const node = await db.prepare('SELECT * FROM nodes WHERE id = ?;').get([part.node]);
 
 			const encryptedbody = pack(node.publickey, body);
 
@@ -268,13 +265,14 @@ io.on('connection', (socket) => {
 					if (!json.success) {
 						// TODO: mark as deleted, and try again later?
 						return socket.nsp.to(userID).emit('message', `[delete] ${path}${name} failed (${i + 1}/${parts.length})`);
-					} else if (i == parts.length - 1) {
-						await PartModel.deleteOne({ _id: part._id });
-
-						socket.nsp.to(userID).emit('message', `[delete] ${path}${name} done`);
-						return io.sockets.emit('reload', 'files');
 					} else {
-						return PartModel.deleteOne({ _id: part._id });
+						await db.prepare('DELETE FROM parts WHERE id = ?;').run([part.id]);
+
+						if (i == parts.length - 1) {
+							await db.prepare('DELETE FROM files WHERE id = ?;').run([file.id]);
+							socket.nsp.to(userID).emit('message', `[delete] ${path}${name} done`);
+							return io.sockets.emit('reload', 'files');
+						}
 					}
 				}).catch(() => {
 					// TODO: mark as deleted, and try again later?
@@ -299,83 +297,12 @@ app
 	.get('/login', async (req, res) => res.render('login', { disable_register: DISABLE_REGISTER }))
 	.get('/', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
-		const nodes = await getNodes();
+		const nodes = await getNodes(false);
 
 		return res.render('index', { nodes });
-	})
-	.post('/nodes/create', async (req, res) => {
-		if (!req.session.loggedin) return res.redirect('/login');
-
-		const {
-			ip,
-			port,
-			publickey,
-		} = req.body;
-
-		if (!ip || !port || !publickey) return res.status(400).json({ message: INVALID_BODY, success: false });
-
-		const status = await connectToNode(ip, port, publickey);
-		if (status.success == false) return res.status(400).json(status);
-
-		const node = new NodeModel({
-			_id: new Types.ObjectId(),
-			ip,
-			port,
-			publickey,
-		});
-
-		node.save().then(async () => {
-			return res.status(200).json({ message: SUCCESS, success: true });
-		}).catch(() => {
-			return res.status(500).json({ message: PROBLEMS_CONNECTING_NODE, success: false });
-		});
 	});
 
 http.listen(panel_port, (err) => {
 	if (err) console.log(err);
 	else console.log(`Server online on port ${panel_port}`);
 });
-
-const connectToNode = async (ip, port, publickey) => {
-	try {
-		const body = {
-			publickey: SERVER_PUBLIC_KEY,
-		};
-		const encryptedbody = pack(publickey, body);
-
-		const res = await fetch(`http://${ip}:${port}/init`, {
-			method: 'POST',
-			body: JSON.stringify(encryptedbody),
-			headers: { 'Content-Type': 'application/json' },
-		});
-		const encryptedjson = await res.json();
-		if (!encryptedjson.encrypted && !encryptedjson.success) return { message: encryptedjson.message, success: false };
-		const json = JSON.parse(unpack(encryptedjson));
-
-		if (!json.success) return { message: json.message, success: false };
-		else return { message: SUCCESS, success: true };
-	} catch (e) {
-		return { message: PROBLEMS_CONNECTING_NODE, success: false };
-	}
-};
-
-const getNodes = async () => {
-	const all = await NodeModel.find();
-	const nodes = [];
-
-	if (all.length == 0) return nodes;
-
-	for (let i = 0; i < all.length; i++) {
-		const node = all[i];
-		const status = await connectToNode(node.ip, node.port, node.publickey);
-
-		nodes.push({
-			id: node._id,
-			connected: status.success,
-		});
-
-		if (i == all.length - 1) {
-			return nodes;
-		}
-	}
-};

@@ -34,14 +34,14 @@
             <% } %>
             <%directories.forEach(directory => {%>
                 <tr>
-                    <td><a href="?path=<%=directory%>"><%=directory%></a></td>
+                    <td><a href="?path=<%=directory.path%>"><%=directory.path%></a></td>
                 </tr>
             <%})%>
             <%files.forEach(file => { %>
                 <tr>
-                    <td><%=file%></td>
-                    <th><button onclick="fileDelete('<%=path%>', '<%=file%>');">Delete</button></th>
-                    <th><button onclick="fileDownload('<%=path%>', '<%=file%>');">Download</button></th>
+                    <td><%=file.name%></td>
+                    <th><button onclick="fileDelete('<%=path%>', '<%=file.name%>');">Delete</button></th>
+                    <th><button onclick="fileDownload('<%=path%>', '<%=file.name%>');">Download</button></th>
                 </tr>
             <% }); %>
         </table>
