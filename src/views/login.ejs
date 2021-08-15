@@ -4,6 +4,7 @@
 		<meta charset="utf-8">
 		<title>Login Form</title>
 		<link rel="stylesheet" href="/css/login.css">
+		<script src="/js/qrcode.js"></script>
 		<script src="/js/login.js"></script>
 	</head>
 	<body>
@@ -25,6 +26,7 @@
 			</div>
 			<div class="form" id="verify-totp" style="display: none;">
 				<p id="Tsecret"></p>
+				<div id="qrcode"></div>
 				<input type="email" id="Temail" name="email" placeholder="Email" required>
 				<input type="number" id="Ttoken" placeholder="TOTP Code" required>
 				<button id="button" onclick="verify();">Verify</button>
