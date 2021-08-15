@@ -1,11 +1,11 @@
 const socket = io();
 
 socket.on('message', (msg) => {
-	document.getElementById('messages').innerHTML = msg + '<br>' + document.getElementById('messages').innerHTML;
+	return document.getElementById('messages').innerHTML = msg + '<br>' + document.getElementById('messages').innerHTML;
 });
 
 socket.on('reload', () => {
-	window.location.reload();
+	return window.location.reload();
 });
 
 socket.on('download', (data) => {
@@ -13,7 +13,7 @@ socket.on('download', (data) => {
 });
 
 socket.on('error', (err) => {
-	document.getElementById('response').innerHTML = err;
+	return document.getElementById('response').innerHTML = err;
 });
 
 socket.on('upload-percentage', (percentage) => {

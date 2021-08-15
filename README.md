@@ -75,7 +75,7 @@ Go to your node (`localhost:3001` by default) and copy the public key.
 npm start
 ```
 
-Play around with `PANEL_MAX_SIZE` in the environment variables if you're getting out of memory crashes (set it lower until you get no crashes anymore).
+Play around with `PANEL_MAX_SIZE` in the environment variables if you're getting out of memory crashes (set it lower until you get no crashes anymore while uploading a big file).
 
 Go to your panel (`localhost:3000` by default), login, and paste the public key (and change the ip/port if you have changed that). If you want to add more nodes, repeat the same steps (installation => copying => pasting).
 
@@ -109,7 +109,7 @@ Please make sure to update tests as appropriate.
 	* encrypting files
 		* [x] encrypting on server
 		* [x] worker threads for encrypting
-		* [ ] worker threads for decrypting
+		* [x] worker threads for decrypting
 		* [ ] encrypting on client?
 	* [x] spread file contents randomly over all nodes
 * tests

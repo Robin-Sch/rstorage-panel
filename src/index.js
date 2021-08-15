@@ -15,7 +15,7 @@ const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 const ss = require('socket.io-stream');
 
-const { generateKeys, unpack, pack, decrypt } = require('./crypt.js');
+const { generateKeys, unpack, pack } = require('./crypt.js');
 const { cleanPath, getNodes, getUsers } = require('./utils.js');
 const db = require('./sql.js');
 const { ALREADY_SUCH_FILE_OR_DIR, NO_SUCH_FILE_OR_DIR, NO_NODES, NO_PERMISSIONS } = require('../responses.json');
@@ -137,7 +137,7 @@ io.on('connection', (socket) => {
 			const worker = new Worker(join(__dirname, './worker.js'), { workerData });
 
 			worker.on('message', (msg) => {
-				if (msg.toUser) socket.in(userID).emit(msg.event, msg.data);
+				if (msg.toUser) socket.nsp.to(userID).emit(msg.event, msg.data);
 				else io.sockets.emit(msg.event, msg.data);
 			});
 			return;
@@ -151,55 +151,21 @@ io.on('connection', (socket) => {
 		const path = cleanPath(data.path);
 		const name = data.name;
 
-		const buffers = [];
-
 		const file = await db.prepare('SELECT * FROM files WHERE path = ? AND name = ?;').get([path, name]);
 		if (!file) return socket.nsp.to(userID).emit('error', NO_SUCH_FILE_OR_DIR);
 
 		const parts = await db.prepare('SELECT * FROM parts WHERE file = ? ORDER BY i;').all(file.id);
 		if (!parts || parts.length == 0) return socket.nsp.to(userID).emit('error', NO_SUCH_FILE_OR_DIR);
 
-		for(let i = 0; i < parts.length; i++) {
-			const part = parts[i];
+		const workerData = { task: 'download', parts, path, name };
 
-			const body = {
-				id: part.id,
-			};
+		const worker = new Worker(join(__dirname, './worker.js'), { workerData });
 
-			await socket.nsp.to(userID).emit('message', `[download] ${path}${name} preparing (${i + 1}/${parts.length})`);
-
-			const node = await db.prepare('SELECT * FROM nodes WHERE id = ?;').get([part.node]);
-
-			const encryptedbody = pack(node.publickey, body);
-
-			fetch(`http://${node.ip}:${node.port}/files/download`, {
-				method: 'POST',
-				body: JSON.stringify(encryptedbody),
-				headers: { 'Content-Type': 'application/json' },
-			}).then(res2 => res2.json())
-				.then(async encryptedjson => {
-					if (!encryptedjson.encrypted && !encryptedjson.success) return socket.nsp.to(userID).emit('message', `[download] ${path}${name} failed (${i + 1}/${parts.length})`);
-					const json = JSON.parse(unpack(encryptedjson));
-
-					if (!json.success) {
-						return socket.nsp.to(userID).emit('message', `[download] ${path}${name} failed (${i + 1}/${parts.length})`);
-					} else {
-						await socket.nsp.to(userID).emit('message', `[download] ${path}${name} decrypting (${i + 1}/${parts.length})`);
-
-						buffers.push(decrypt(Buffer.from(json.content), part.iv));
-						socket.nsp.to(userID).emit('message', `[download] ${path}${name} done (${i + 1}/${parts.length})`);
-
-						if (i == parts.length - 1) {
-							const content = Buffer.concat(buffers);
-
-							socket.nsp.to(userID).emit('message', `[download] ${path}${name} done everything`);
-							return socket.nsp.to(userID).emit('download', { content, name });
-						}
-					}
-				}).catch(() => {
-					return socket.nsp.to(userID).emit('message', `[download] ${path}${name} failed (${i + 1}/${parts.length})`);
-				});
-		}
+		worker.on('message', (msg) => {
+			if (msg.toUser) socket.nsp.to(userID).emit(msg.event, msg.data);
+			else io.sockets.emit(msg.event, msg.data);
+		});
+		return;
 	});
 
 	socket.on('delete', async (data) => {

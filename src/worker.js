@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const FormData = require('form-data');
 
 const db = require('./sql.js');
-const { unpack } = require('./crypt.js');
+const { unpack, pack } = require('./crypt.js');
 
 const tempDir = join(__dirname, '../', 'files');
 
@@ -21,18 +21,18 @@ const upload = async ({ nodeForThisLoop, fileID, partID, curloop, loops, path, n
 	const iv = crypto.randomBytes(16);
 	const cipher = crypto.createCipheriv('aes-256-ctr', key, iv);
 
-	const inputStream = createReadStream(`${tempDir}/plain_${partID}`);
-	const outputStream = createWriteStream(`${tempDir}/${partID}`);
+	const plainStream = createReadStream(`${tempDir}/plain_${partID}`);
+	const encryptedStream = createWriteStream(`${tempDir}/${partID}`);
 
-	inputStream.on('data', (data) => {
+	plainStream.on('data', (data) => {
 		const buff = Buffer.from(cipher.update(data), 'binary');
-		return outputStream.write(buff);
+		return encryptedStream.write(buff);
 	});
 
-	inputStream.on('end', async () => {
+	plainStream.on('end', async () => {
 		const buff = Buffer.from(cipher.final('binary'), 'binary');
-		outputStream.write(buff);
-		outputStream.end();
+		encryptedStream.write(buff);
+		encryptedStream.end();
 
 		await unlinkSync(`${tempDir}/plain_${partID}`);
 
@@ -45,14 +45,14 @@ const upload = async ({ nodeForThisLoop, fileID, partID, curloop, loops, path, n
 		}).then(res2 => res2.json())
 			.then(async encryptedjson => {
 				if (!encryptedjson.encrypted && !encryptedjson.success) {
-				// TODO: delete all uploaded parts, and throw error?
+					// TODO: delete all uploaded parts, and throw error?
 					return parentPort.postMessage({ toUser: true, event: 'message', 'data': `[upload] ${path}${name} failed (${curloop + 1}/${loops})` });
 				}
 
 				const json = JSON.parse(unpack(encryptedjson));
 
 				if (!json.success) {
-				// TODO: delete all uploaded parts, and throw error?
+					// TODO: delete all uploaded parts, and throw error?
 					return parentPort.postMessage({ toUser: true, event: 'message', 'data': `[upload] ${path}${name} failed (${curloop + 1}/${loops})` });
 				} else {
 					await db.prepare('INSERT INTO parts (id, file, node, iv, i) VALUES (?,?,?,?,?);').run([partID, fileID, nodeForThisLoop.id, iv, curloop]);
@@ -67,10 +67,80 @@ const upload = async ({ nodeForThisLoop, fileID, partID, curloop, loops, path, n
 					}
 				}
 			}).catch(() => {
-			// TODO: delete all uploaded parts, and throw error?
+				// TODO: delete all uploaded parts, and throw error?
 				return parentPort.postMessage({ toUser: true, event: 'message', 'data': `[upload] ${path}${name} failed (${curloop + 1}/${loops})` });
 			});
 	});
 };
 
+const download = async ({ parts, path, name }) => {
+	const buffers = {};
+
+	for(let i = 0; i < parts.length; i++) {
+		const part = parts[i];
+
+		const partID = part.id;
+
+		const body = {
+			id: partID,
+		};
+
+		parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] ${path}${name} preparing (${i + 1}/${parts.length})` });
+
+		const node = await db.prepare('SELECT * FROM nodes WHERE id = ?;').get([part.node]);
+
+		const encryptedbody = pack(node.publickey, body);
+
+		const encryptedWriteStream = createWriteStream(`${tempDir}/${partID}`);
+
+		fetch(`http://${node.ip}:${node.port}/files/download`, {
+			method: 'POST',
+			body: JSON.stringify(encryptedbody),
+			headers: { 'Content-Type': 'application/json' },
+		}).then(async res => {
+			if (res.status == 200) res.body.pipe(encryptedWriteStream);
+			else throw new Error(await res.text());
+		}).then(() => {
+			const partBuffer = [];
+
+			const encryptedReadStream = createReadStream(`${tempDir}/${partID}`);
+			// const plainStream = createWriteStream(`${tempDir}/plain_${partID}`);
+
+			const iv = part.iv;
+			const cipher = crypto.createDecipheriv('aes-256-ctr', key, iv);
+
+			encryptedReadStream.on('data', (data) => {
+				const buff = Buffer.from(cipher.update(data), 'binary');
+				return partBuffer.push(buff);
+				// return plainStream.write();
+			});
+
+			encryptedReadStream.on('end', async () => {
+				const buff = Buffer.from(cipher.final('binary'), 'binary');
+				// plainStream.write(buff);
+				// plainStream.end();
+				if(buff.length !== 0) partBuffer.push(buff);
+
+				await unlinkSync(`${tempDir}/${partID}`);
+
+				parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] ${path}${name} decrypting (${i + 1}/${parts.length})` });
+
+				buffers[part.id] = partBuffer;
+				parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] ${path}${name} done (${i + 1}/${parts.length})` });
+
+				if (i == parts.length - 1) {
+					const buffer = [].concat(...Object.values(buffers));
+					const content = Buffer.concat(buffer);
+
+					parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] ${path}${name} decrypting everything` });
+					return parentPort.postMessage({ toUser: true, event: 'download', 'data': { content, name } });
+				}
+			});
+		}).catch(() => {
+			return parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] ${path}${name} failed (${i + 1}/${parts.length})` });
+		});
+	}
+};
+
 if (workerData.task == 'upload') return upload(workerData);
+if (workerData.task == 'download') return download(workerData);
