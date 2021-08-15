@@ -90,16 +90,7 @@ if (!existsSync(join(__dirname, '../', 'keys/key'))) {
 }
 const key = readFileSync(join(__dirname, '../', 'keys/key'));
 
-
-const encrypt = (buffer) => {
-	const iv = crypto.randomBytes(16);
-	const cipher = crypto.createCipheriv('aes-256-ctr', key, iv);
-	return Buffer.concat([iv, cipher.update(buffer), cipher.final()]);
-};
-
-const decrypt = (buffer) => {
-	const iv = buffer.slice(0, 16);
-	buffer = buffer.slice(16);
+const decrypt = (buffer, iv) => {
 	const decipher = crypto.createDecipheriv('aes-256-ctr', key, iv);
 	return Buffer.concat([decipher.update(buffer), decipher.final()]);
 };
@@ -108,6 +99,5 @@ module.exports = {
 	pack,
 	unpack,
 	generateKeys,
-	encrypt,
 	decrypt,
 };

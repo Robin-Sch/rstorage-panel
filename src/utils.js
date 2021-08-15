@@ -48,7 +48,13 @@ const getNodes = async (skipNotConnected, skipConnectionDetails) => {
 		const node = all[i];
 		const status = await connectToNode(node.ip, node.port, node.publickey);
 
-		if (skipNotConnected && !status.success) continue;
+		if (skipNotConnected && !status.success) {
+			if (i == all.length - 1) {
+				return nodes;
+			} else {
+				continue;
+			}
+		}
 
 		const obj = {
 			id: node.id,

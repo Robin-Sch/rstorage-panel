@@ -108,7 +108,8 @@ Please make sure to update tests as appropriate.
 		* [ ] sharing files?
 	* encrypting files
 		* [x] encrypting on server
-		* [ ] worker threads?
+		* [x] worker threads for encrypting
+		* [ ] worker threads for decrypting
 		* [ ] encrypting on client?
 	* [x] spread file contents randomly over all nodes
 * tests

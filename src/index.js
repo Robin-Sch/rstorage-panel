@@ -8,13 +8,14 @@ const { readFileSync, writeFileSync, existsSync, mkdirSync } = require('fs');
 const fetch = require('node-fetch');
 const randomstring = require('randomstring');
 const { v4: uuidv4 } = require('uuid');
+const { Worker } = require('worker_threads');
 
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 const ss = require('socket.io-stream');
 
-const { generateKeys, unpack, pack, encrypt, decrypt } = require('./crypt.js');
+const { generateKeys, unpack, pack, decrypt } = require('./crypt.js');
 const { cleanPath, getNodes, getUsers } = require('./utils.js');
 const db = require('./sql.js');
 const { ALREADY_SUCH_FILE_OR_DIR, NO_SUCH_FILE_OR_DIR, NO_NODES, NO_PERMISSIONS } = require('../responses.json');
@@ -46,6 +47,8 @@ const sessionHandler = session({
 const panel_port = PANEL_PORT || 3000;
 
 if (!existsSync(join(__dirname, '../', 'keys'))) mkdirSync(join(__dirname, '../', 'keys'));
+if (!existsSync(join(__dirname, '../', 'files'))) mkdirSync(join(__dirname, '../', 'files'));
+const tempDir = join(__dirname, '../', 'files');
 let SERVER_PRIVATE_KEY = existsSync(join(__dirname, '../', 'keys/rsa_key')) ? readFileSync(join(__dirname, '../', 'keys/rsa_key'), 'utf8') : null;
 let SERVER_PUBLIC_KEY = existsSync(join(__dirname, '../', 'keys/rsa_key.pub')) ? readFileSync(join(__dirname, '../', 'keys/rsa_key.pub'), 'utf8') : null;
 
@@ -66,7 +69,6 @@ passport.serializeUser(function(user, done) {
 passport.deserializeUser(function(user, done) {
 	done(null, user);
 });
-
 
 io.use((socket, next) => {
 	const req = socket.handshake;
@@ -119,54 +121,26 @@ io.on('connection', (socket) => {
 			i++;
 
 			const nodeForThisLoop = nodes[Math.floor(Math.random() * nodes.length)];
+			const partID = uuidv4();
 
 			const extra = curloop == loops - 1 ? remaining : 0;
 			const rest = received.length - amountPerLoop - extra;
 			const dataForThisLoop = rest == 0 ? received : received.slice(0, -rest);
 			received = rest == 0 ? Buffer.from('') : received.slice(-rest);
 
+			await writeFileSync(`${tempDir}/plain_${partID}`, dataForThisLoop, 'binary');
+
 			await socket.nsp.to(userID).emit('message', `[upload] ${path}${name} encrypting (${curloop + 1}/${loops})`);
 
-			const content = encrypt(dataForThisLoop);
-			const id = uuidv4();
+			const workerData = { task: 'upload', nodeForThisLoop, fileID, partID, curloop, loops, path, name };
 
-			const body = {
-				content,
-				id,
-			};
+			const worker = new Worker(join(__dirname, './worker.js'), { workerData });
 
-			const encryptedbody = pack(nodeForThisLoop.publickey, body);
-
-			fetch(`http://${nodeForThisLoop.ip}:${nodeForThisLoop.port}/files/upload`, {
-				method: 'POST',
-				body: JSON.stringify(encryptedbody),
-				headers: { 'Content-Type': 'application/json' },
-			}).then(res2 => res2.json())
-				.then(async encryptedjson => {
-					if (!encryptedjson.encrypted && !encryptedjson.success) {
-						// TODO: delete all uploaded parts, and throw error?
-						return socket.nsp.to(userID).emit('message', `[upload] ${path}${name} failed (${curloop + 1}/${loops})`);
-					}
-
-					const json = JSON.parse(unpack(encryptedjson));
-
-					if (!json.success) {
-						// TODO: delete all uploaded parts, and throw error?
-						return socket.nsp.to(userID).emit('message', `[upload] ${path}${name} failed (${curloop + 1}/${loops})`);
-					} else {
-						await db.prepare('INSERT INTO parts (id, file, node, i) VALUES (?,?,?,?);').run([id, fileID, nodeForThisLoop.id, curloop]);
-
-						socket.nsp.to(userID).emit('message', `[upload] ${path}${name} done (${curloop + 1}/${loops})`);
-
-						if(curloop == loops - 1) {
-							socket.nsp.to(userID).emit('message', `[upload] ${path}${name} done everything`);
-							return io.sockets.emit('reload', 'files');
-						}
-					}
-				}).catch(() => {
-					// TODO: delete all uploaded parts, and throw error?
-					return socket.nsp.to(userID).emit('message', `[upload] ${path}${name} failed (${curloop + 1}/${loops})`);
-				});
+			worker.on('message', (msg) => {
+				if (msg.toUser) socket.in(userID).emit(msg.event, msg.data);
+				else io.sockets.emit(msg.event, msg.data);
+			});
+			return;
 		});
 	});
 
@@ -212,7 +186,7 @@ io.on('connection', (socket) => {
 					} else {
 						await socket.nsp.to(userID).emit('message', `[download] ${path}${name} decrypting (${i + 1}/${parts.length})`);
 
-						buffers.push(decrypt(Buffer.from(json.content)));
+						buffers.push(decrypt(Buffer.from(json.content), part.iv));
 						socket.nsp.to(userID).emit('message', `[download] ${path}${name} done (${i + 1}/${parts.length})`);
 
 						if (i == parts.length - 1) {
@@ -239,7 +213,11 @@ io.on('connection', (socket) => {
 		if (!file) return socket.nsp.to(userID).emit('error', NO_SUCH_FILE_OR_DIR);
 
 		const parts = await db.prepare('SELECT * FROM parts WHERE file = ? ORDER BY i;').all(file.id);
-		if (!parts || parts.length == 0) return socket.nsp.to(userID).emit('error', NO_SUCH_FILE_OR_DIR);
+		if (!parts || parts.length == 0) {
+			await db.prepare('DELETE FROM files WHERE id = ?;').run([file.id]);
+			socket.nsp.to(userID).emit('message', `[delete] ${path}${name} done`);
+			return io.sockets.emit('reload', 'files');
+		}
 
 		for(let i = 0; i < parts.length; i++) {
 			const part = parts[i];
