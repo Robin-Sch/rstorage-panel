@@ -1,21 +1,22 @@
 require('dotenv').config();
-
 const express = require('express');
 const session = require('express-session');
 const passport = require('passport');
 const { join } = require('path');
-const { readFileSync, writeFileSync, existsSync, mkdirSync } = require('fs');
+const { existsSync, mkdirSync } = require('fs');
 const fetch = require('node-fetch');
-const randomstring = require('randomstring');
+const { generate: generateRandomstring } = require('randomstring');
 const { v4: uuidv4 } = require('uuid');
 const { Worker } = require('worker_threads');
+const { Agent } = require('https');
 
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 const ss = require('socket.io-stream');
 
-const { generateKeys, unpack, pack } = require('./crypt.js');
+if (!existsSync(join(__dirname, '../', 'keys'))) mkdirSync(join(__dirname, '../', 'keys'));
+
 const { cleanPath, getNodes, getUsers } = require('./utils.js');
 const db = require('./sql.js');
 const { ALREADY_SUCH_FILE_OR_DIR, NO_SUCH_FILE_OR_DIR, NO_NODES, NO_PERMISSIONS } = require('../responses.json');
@@ -37,7 +38,7 @@ if (PANEL_FORCE_SPREADING.toLowerCase() == 'true') FORCE_SPREADING = true;
 let DISABLE_REGISTER = true;
 if (PANEL_DISABLE_REGISTER.toLowerCase() == 'false') DISABLE_REGISTER = false;
 
-const SECRET = randomstring.generate();
+const SECRET = generateRandomstring();
 const sessionHandler = session({
 	secret: SECRET,
 	resave: true,
@@ -46,20 +47,7 @@ const sessionHandler = session({
 
 const panel_port = PANEL_PORT || 3000;
 
-if (!existsSync(join(__dirname, '../', 'keys'))) mkdirSync(join(__dirname, '../', 'keys'));
 if (!existsSync(join(__dirname, '../', 'files'))) mkdirSync(join(__dirname, '../', 'files'));
-let SERVER_PRIVATE_KEY = existsSync(join(__dirname, '../', 'keys/rsa_key')) ? readFileSync(join(__dirname, '../', 'keys/rsa_key'), 'utf8') : null;
-let SERVER_PUBLIC_KEY = existsSync(join(__dirname, '../', 'keys/rsa_key.pub')) ? readFileSync(join(__dirname, '../', 'keys/rsa_key.pub'), 'utf8') : null;
-
-if (!SERVER_PRIVATE_KEY || !SERVER_PUBLIC_KEY) {
-	const keys = generateKeys();
-
-	SERVER_PRIVATE_KEY = keys.private;
-	SERVER_PUBLIC_KEY = keys.public;
-
-	writeFileSync(join(__dirname, '../', 'keys/rsa_key'), SERVER_PRIVATE_KEY);
-	writeFileSync(join(__dirname, '../', 'keys/rsa_key.pub'), SERVER_PUBLIC_KEY);
-}
 
 passport.serializeUser(function(user, done) {
 	done(null, user);
@@ -191,20 +179,17 @@ io.on('connection', (socket) => {
 
 			const node = await db.prepare('SELECT * FROM nodes WHERE id = ?;').get([part.node]);
 
-			const encryptedbody = pack(node.publickey, body);
+			const agent = new Agent({
+				ca: node.ca,
+			});
 
-			fetch(`http://${node.ip}:${node.port}/files/delete`, {
+			fetch(`https://${node.ip}:${node.port}/files/delete`, {
 				method: 'POST',
-				body: JSON.stringify(encryptedbody),
+				body: JSON.stringify(body),
 				headers: { 'Content-Type': 'application/json' },
+				agent,
 			}).then(res2 => res2.json())
-				.then(async encryptedjson => {
-					if (!encryptedjson.encrypted && !encryptedjson.success) {
-						// TODO: mark as deleted, and try again later?
-						return socket.nsp.to(userID).emit('message', `[delete] ${path}${name} failed (${i + 1}/${parts.length})`);
-					}
-					const json = JSON.parse(unpack(encryptedjson));
-
+				.then(async json => {
 					if (!json.success) {
 						// TODO: mark as deleted, and try again later?
 						return socket.nsp.to(userID).emit('message', `[delete] ${path}${name} failed (${i + 1}/${parts.length})`);

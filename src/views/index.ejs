@@ -27,9 +27,10 @@
             <% }); %>
             <tr>
                 <th>
-                    <input type="text" id="ip" name="ip" placeholder="ip" value="127.0.0.1" required>
+                    <input type="text" id="ip" name="ip" placeholder="ip" value="localhost" required>
                     <input type="number" id="port" name="port" placeholder="port" value="3001" required></th>
-                <th><textarea type="test" id="publickey" name="publickey" placeholder="publickey" required></textarea></th>
+                    <th><textarea type="test" id="ca" name="ca" required>-----BEGIN CERTIFICATE-----
+----END CERTIFICATE-----</textarea></th>
                 <th><button id="button" onclick="nodeCreate();">Add</button></th>
             </tr>
         </table>

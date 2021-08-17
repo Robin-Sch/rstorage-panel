@@ -19,7 +19,7 @@ router
 			id: node.id,
 			ip: node.ip,
 			port: node.port,
-			publickey: node.publickey,
+			ca: node.ca,
 		};
 
 		return res.status(200).render('node', { details });
@@ -31,15 +31,15 @@ router
 		const {
 			ip,
 			port,
-			publickey,
+			ca,
 		} = req.body;
 
-		if (!ip || !port || !publickey) return res.status(400).json({ message: INVALID_BODY, success: false });
+		if (!ip || !port || !ca) return res.status(400).json({ message: INVALID_BODY, success: false });
 
 		const node = await db.prepare('SELECT * FROM nodes WHERE id = ?;').get([req.params.id]);
 		if (!node) return res.status(403).json({ message: INVALID_NODE, success: false });
 
-		await db.prepare('UPDATE nodes SET ip = ?, port = ?, publickey = ? WHERE id = ?').run([ip, port, publickey, req.params.id]);
+		await db.prepare('UPDATE nodes SET ip = ?, port = ?, ca = ? WHERE id = ?').run([ip, port, req.params.id, ca]);
 
 		return res.status(200).json({ message: SUCCESS, success: true });
 	})
@@ -61,15 +61,15 @@ router
 		const {
 			ip,
 			port,
-			publickey,
+			ca,
 		} = req.body;
 
-		if (!ip || !port || !publickey) return res.status(400).json({ message: INVALID_BODY, success: false });
+		if (!ip || !port || !ca) return res.status(400).json({ message: INVALID_BODY, success: false });
 
-		const status = await connectToNode(ip, port, publickey);
+		const status = await connectToNode(ip, port, ca);
 		if (status.success == false) return res.status(400).json(status);
 
-		await db.prepare('INSERT INTO nodes (id, ip, port, publickey) VALUES (?,?,?,?);').run([uuidv4(), ip, port, publickey]);
+		await db.prepare('INSERT INTO nodes (id, ip, port, ca) VALUES (?,?,?,?);').run([uuidv4(), ip, port, ca]);
 		return res.status(200).json({ message: SUCCESS, success: true });
 	});
 

@@ -41,6 +41,9 @@ npm i
 
 Rename `.env.example` to `.env`, and fill in the environment variables.
 
+Run `npm start` to generate the SSL certificate.
+
+Copy the certificate printed in console, then start the node:
 ```
 npm start
 ```
@@ -68,8 +71,6 @@ Go to your panel (`localhost:3000` by default) and login with email `admin` and 
 npm start
 ```
 
-Go to your node (`localhost:3001` by default) and copy the public key.
-
 ### Panel
 ```
 npm start
@@ -77,7 +78,7 @@ npm start
 
 Play around with `PANEL_MAX_SIZE` in the environment variables if you're getting out of memory crashes (set it lower until you get no crashes anymore while uploading a big file).
 
-Go to your panel (`localhost:3000` by default), login, and paste the public key (and change the ip/port if you have changed that). If you want to add more nodes, repeat the same steps (installation => copying => pasting).
+Go to your panel (`localhost:3000` by default), login, and paste the certificate (of your node's console) (and change the ip/port if you have changed that). If you want to add more nodes, repeat the same steps (installation => copying => pasting).
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.

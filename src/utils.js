@@ -1,9 +1,11 @@
-const { existsSync, readFileSync } = require('fs');
+const { existsSync, mkdirSync, readFileSync, writeFileSync } = require('fs');
 const { join } = require('path');
 const fetch = require('node-fetch');
 const { Readable } = require('stream');
+const { randomBytes } = require('crypto');
+const { generate } = require('randomstring');
+const { Agent } = require('https');
 
-const { pack, unpack } = require('./crypt.js');
 const db = require('./sql.js');
 const { SUCCESS, PROBLEMS_CONNECTING_NODE } = require('../responses.json');
 
@@ -15,22 +17,24 @@ const cleanPath = (path) => {
 	return path;
 };
 
-const connectToNode = async (ip, port, publickey) => {
+const connectToNode = async (ip, port, ca) => {
 	try {
 
 		const body = {
-			publickey: existsSync(join(__dirname, '../', 'keys/rsa_key.pub')) ? readFileSync(join(__dirname, '../', 'keys/rsa_key.pub'), 'utf8') : null,
+			key: getPanelKey(),
 		};
-		const encryptedbody = pack(publickey, body);
 
-		const res = await fetch(`http://${ip}:${port}/init`, {
-			method: 'POST',
-			body: JSON.stringify(encryptedbody),
-			headers: { 'Content-Type': 'application/json' },
+		const agent = new Agent({
+			ca,
 		});
-		const encryptedjson = await res.json();
-		if (!encryptedjson.encrypted && !encryptedjson.success) return { message: encryptedjson.message, success: false };
-		const json = JSON.parse(unpack(encryptedjson));
+
+		const res = await fetch(`https://${ip}:${port}/init`, {
+			method: 'POST',
+			body: JSON.stringify(body),
+			headers: { 'Content-Type': 'application/json' },
+			agent,
+		});
+		const json = await res.json();
 
 		if (!json.success) return { message: json.message, success: false };
 		else return { message: SUCCESS, success: true };
@@ -47,7 +51,7 @@ const getNodes = async (skipNotConnected, skipConnectionDetails) => {
 
 	for (let i = 0; i < all.length; i++) {
 		const node = all[i];
-		const status = await connectToNode(node.ip, node.port, node.publickey);
+		const status = await connectToNode(node.ip, node.port, node.ca);
 
 		if (skipNotConnected && !status.success) {
 			if (i == all.length - 1) {
@@ -65,7 +69,7 @@ const getNodes = async (skipNotConnected, skipConnectionDetails) => {
 		if (!skipConnectionDetails) {
 			obj.ip = node.ip;
 			obj.port = node.port;
-			obj.publickey = node.publickey;
+			obj.ca = node.ca;
 		}
 
 		nodes.push(obj);
@@ -152,6 +156,26 @@ const bufferToStream = (buffer) => {
 	return Readable.from(buffer);
 };
 
+const getPanelKey = () => {
+	if (!existsSync(join(__dirname, '../', 'keys'))) mkdirSync(join(__dirname, '../', 'keys'));
+	let panelKey = existsSync(join(__dirname, '../', 'keys/panel')) ? readFileSync(join(__dirname, '../', 'keys/panel'), 'utf8') : null;
+	if (!panelKey) {
+		panelKey = generate();
+		writeFileSync(join(__dirname, '../', 'keys/panel'), panelKey);
+	}
+	return panelKey;
+};
+
+const getKey = () => {
+	if (!existsSync(join(__dirname, '../', 'keys'))) mkdirSync(join(__dirname, '../', 'keys'));
+	let key = existsSync(join(__dirname, '../', 'keys/key')) ? readFileSync(join(__dirname, '../', 'keys/key')) : null;
+	if (!key) {
+		key = randomBytes(32);
+		writeFileSync(join(__dirname, '../', 'keys/key'), key);
+	}
+	return key;
+};
+
 module.exports = {
 	cleanPath,
 	connectToNode,
@@ -159,4 +183,6 @@ module.exports = {
 	getUsers,
 	getPermissions,
 	bufferToStream,
+	getPanelKey,
+	getKey,
 };

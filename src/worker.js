@@ -1,26 +1,21 @@
 const { workerData, parentPort } = require('worker_threads');
 const fetch = require('node-fetch');
 const { join } = require('path');
-const { existsSync, mkdirSync, writeFileSync, readFileSync, createReadStream, createWriteStream, unlinkSync } = require('fs');
-const crypto = require('crypto');
+const { createReadStream, createWriteStream, unlinkSync } = require('fs');
+const { randomBytes, createCipheriv, createDecipheriv } = require('crypto');
 const FormData = require('form-data');
+const { Agent } = require('https');
 
 const db = require('./sql.js');
-const { unpack, pack } = require('./crypt.js');
-const { bufferToStream } = require('./utils.js');
+const { bufferToStream, getKey } = require('./utils.js');
 
 const tempDir = join(__dirname, '../', 'files');
 
-if (!existsSync(join(__dirname, '../', 'keys'))) mkdirSync(join(__dirname, '../', 'keys'));
-if (!existsSync(join(__dirname, '../', 'keys/key'))) {
-	const key = crypto.randomBytes(32);
-	writeFileSync(join(__dirname, '../', 'keys/key'), key);
-}
-const key = readFileSync(join(__dirname, '../', 'keys/key'));
+const key = getKey();
 
 const upload = async ({ dataForThisLoop, nodeForThisLoop, fileID, partID, curloop, loops, path, name }) => {
-	const iv = crypto.randomBytes(16);
-	const cipher = crypto.createCipheriv('aes-256-ctr', key, iv);
+	const iv = randomBytes(16);
+	const cipher = createCipheriv('aes-256-ctr', key, iv);
 
 	// TODO: a Transform stream here maybe? I tried but I couldn't get it to work tho
 	const plainStream = bufferToStream(Buffer.from(dataForThisLoop));
@@ -39,18 +34,16 @@ const upload = async ({ dataForThisLoop, nodeForThisLoop, fileID, partID, curloo
 		const formData = new FormData();
 		formData.append('file', createReadStream(`${tempDir}/${partID}`));
 
-		fetch(`http://${nodeForThisLoop.ip}:${nodeForThisLoop.port}/files/upload`, {
+		const agent = new Agent({
+			ca: nodeForThisLoop.ca,
+		});
+
+		fetch(`https://${nodeForThisLoop.ip}:${nodeForThisLoop.port}/files/upload`, {
 			method: 'POST',
 			body: formData,
+			agent,
 		}).then(res2 => res2.json())
-			.then(async encryptedjson => {
-				if (!encryptedjson.encrypted && !encryptedjson.success) {
-					// TODO: delete all uploaded parts, and throw error?
-					return parentPort.postMessage({ toUser: true, event: 'message', 'data': `[upload] ${path}${name} failed (${curloop + 1}/${loops})` });
-				}
-
-				const json = JSON.parse(unpack(encryptedjson));
-
+			.then(async json => {
 				if (!json.success) {
 					// TODO: delete all uploaded parts, and throw error?
 					return parentPort.postMessage({ toUser: true, event: 'message', 'data': `[upload] ${path}${name} failed (${curloop + 1}/${loops})` });
@@ -78,6 +71,7 @@ const download = async ({ parts, path, name }) => {
 
 	for(let i = 0; i < parts.length; i++) {
 		const part = parts[i];
+		const curloop = i;
 
 		const partID = part.id;
 
@@ -85,22 +79,25 @@ const download = async ({ parts, path, name }) => {
 			id: partID,
 		};
 
-		parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] ${path}${name} preparing (${i + 1}/${parts.length})` });
+		parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] ${path}${name} preparing (${curloop + 1}/${parts.length})` });
 
 		const node = await db.prepare('SELECT * FROM nodes WHERE id = ?;').get([part.node]);
 
-		const encryptedbody = pack(node.publickey, body);
+		const agent = new Agent({
+			ca: node.ca,
+		});
 
-		fetch(`http://${node.ip}:${node.port}/files/download`, {
+		fetch(`https://${node.ip}:${node.port}/files/download`, {
 			method: 'POST',
-			body: JSON.stringify(encryptedbody),
+			body: JSON.stringify(body),
 			headers: { 'Content-Type': 'application/json' },
+			agent,
 		}).then(async res => {
 			if (res.status !== 200) throw new Error((await res.json()).message);
 			const partBuffer = [];
 
 			const iv = part.iv;
-			const cipher = crypto.createDecipheriv('aes-256-ctr', key, iv);
+			const cipher = createDecipheriv('aes-256-ctr', key, iv);
 
 			res.body.on('data', (data) => {
 				const buff = Buffer.from(cipher.update(data), 'binary');
@@ -111,12 +108,14 @@ const download = async ({ parts, path, name }) => {
 				const buff = Buffer.from(cipher.final('binary'), 'binary');
 				if(buff.length !== 0) partBuffer.push(buff);
 
-				parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] ${path}${name} decrypting (${i + 1}/${parts.length})` });
+				parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] ${path}${name} decrypting (${curloop + 1}/${parts.length})` });
 
 				buffers[part.id] = partBuffer;
-				parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] ${path}${name} done (${i + 1}/${parts.length})` });
+				parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] ${path}${name} done (${curloop + 1}/${parts.length})` });
 
-				if (i == parts.length - 1) {
+				if (curloop == parts.length - 1) {
+					// console.log(Object.keys(buffers));
+					// sometimes this messes up, and doesn't download all parts?
 					const buffer = [].concat(...Object.values(buffers));
 					const content = Buffer.concat(buffer);
 
@@ -125,7 +124,7 @@ const download = async ({ parts, path, name }) => {
 				}
 			});
 		}).catch(() => {
-			return parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] ${path}${name} failed (${i + 1}/${parts.length})` });
+			return parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] ${path}${name} failed (${curloop + 1}/${parts.length})` });
 		});
 	}
 };

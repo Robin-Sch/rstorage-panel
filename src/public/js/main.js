@@ -1,15 +1,15 @@
 const nodeCreate = () => {
 	const ip = document.getElementById('ip').value;
 	const port = document.getElementById('port').value;
-	const publickey = document.getElementById('publickey').value;
+	const ca = document.getElementById('ca').value;
 
-	const valid = validate(ip, port, publickey);
+	const valid = validate(ip, port, ca);
 	if (!valid.success) return alert(valid.message);
 
 	const body = {
 		ip,
 		port,
-		publickey,
+		ca,
 	};
 
 	fetch('/nodes/create', {
@@ -28,15 +28,15 @@ const nodeCreate = () => {
 const nodeEdit = (id) => {
 	const ip = document.getElementById('ip').value;
 	const port = document.getElementById('port').value;
-	const publickey = document.getElementById('publickey').value;
+	const ca = document.getElementById('ca').value;
 
-	const valid = validate(ip, port, publickey);
+	const valid = validate(ip, port, ca);
 	if (!valid.success) return alert(valid.message);
 
 	const body = {
 		ip,
 		port,
-		publickey,
+		ca,
 	};
 
 	fetch(`/nodes/${id}/edit`, {
@@ -149,13 +149,17 @@ const replaceQueryParam = (param, newval, search) => {
     return (query.length > 2 ? query + "&" : "?") + (newval ? param + "=" + newval : '');
 } 
 
-const validate = (ip, port, publickey) => {
+const validate = (ip, port, ca) => {
 	if (!ip) {
 		return { success: false, message: 'Missing the ip!' };
 	} else if (!port) {
 		return { success: false, message: 'Missing the port!' };
-	} else if (!publickey) {
-		return { success: false, message: 'Missing the public key!' };
+	}  else if (!ca) {
+		return { success: false, message: 'Missing the certificate!' };
+	} else if (!ca.startsWith('-----BEGIN CERTIFICATE-----')) {
+		return { success: false, message: 'Invalid certificate (make sure to include the -----BEGIN CERTIFICATE-----)!' };
+	} else if (!ca.endsWith('-----END CERTIFICATE-----')) {
+		return { success: false, message: 'Invalid certificate (make sure to include the -----END CERTIFICATE-----)!' };
 	} else {
 		return { success: true };
 	}
