@@ -96,7 +96,7 @@ Please make sure to update tests as appropriate.
 * connecting node to panel
 	* [x] generating key pair on both panel and node
 	* [x] connect using the node's public key
-	* [ ] self-signed certs?
+	* [x] self-signed certs?
 	* [x] editing a node's details
 	* [x] deleting a node's details
 * storing files
@@ -114,9 +114,8 @@ Please make sure to update tests as appropriate.
 		* [x] worker threads for decrypting
 		* [ ] encrypting on client?
 	* [x] spread file contents randomly over all nodes
-* tests
-	* [ ] node tests
-	* [ ] panel tests
+* [x] tests
+* [ ] electron app instead of panel webpage?
 
 ## Environment variables
 * PANEL_MAX_SIZE (Default: 8) (in megabytes)
@@ -131,6 +130,10 @@ Please make sure to update tests as appropriate.
 
 * PANEL_PORT (Default: 3000)
 	* The port the panel is listening on.
+
+* NODE_COMMONNAME (Default: 127.0.0.1)
+	* The IP (or hostname) the node is listening on.
+	* Examples: node1.yourdomain.com, yourdomain.com, 1.1.1.1, 192.168.1.1, 127.0.0.1, localhost
 
 * NODE_PORT (Default: 3001)
 	* The port the node is listening on.

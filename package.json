@@ -4,7 +4,8 @@
 	"description": "RStorage is an encrypted cloud file storage.",
 	"main": "src/index.js",
 	"scripts": {
-		"start": "node ."
+		"start": "node .",
+		"test": "node tests/start.js"
 	},
 	"keywords": [],
 	"author": "Robin",
@@ -30,6 +31,7 @@
 		"uuid": "^8.3.2"
 	},
 	"devDependencies": {
-		"eslint": "^7.32.0"
+		"eslint": "^7.32.0",
+		"testcafe": "^1.15.2"
 	}
 }

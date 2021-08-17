@@ -18,7 +18,7 @@ const ss = require('socket.io-stream');
 if (!existsSync(join(__dirname, '../', 'keys'))) mkdirSync(join(__dirname, '../', 'keys'));
 
 const { cleanPath, getNodes, getUsers } = require('./utils.js');
-const db = require('./sql.js');
+const { db } = require('./sql.js');
 const { ALREADY_SUCH_FILE_OR_DIR, NO_SUCH_FILE_OR_DIR, NO_NODES, NO_PERMISSIONS } = require('../responses.json');
 
 const accountsRouter = require('./routers/accounts.js');

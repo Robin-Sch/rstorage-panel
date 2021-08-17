@@ -3,7 +3,7 @@ const speakeasy = require('speakeasy');
 const { compare, hash } = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
 
-const db = require('../sql.js');
+const { db } = require('../sql.js');
 const { getPermissions } = require('../utils.js');
 const { INVALID_USER, NO_PERMISSIONS, INVALID_BODY, SUCCESS } = require('../../responses.json');
 

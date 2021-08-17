@@ -13,16 +13,16 @@
 				<input type="email" id="Lemail" name="email" placeholder="Email" required>
 				<input type="password" id="Lpassword" name="password" placeholder="Password" required>
 				<input type="number" id="Ltoken" name="token" placeholder="2fa token (optional)">
-				<button id="button" onclick="login();">Login</button>
-				<button onclick="change('register', '<%=disable_register%>');">Register instead?</button>
+				<button id="Lbutton" onclick="login();">Login</button>
+				<button id="Lchange" onclick="change('register', '<%=disable_register%>');">Register instead?</button>
 			</div>
 			<div class="form" id="register" style="display: none;">
 				<input type="text" id="Rusername" name="username" placeholder="Username" required>
 				<input type="email" id="Remail" name="email" placeholder="Email" required>
 				<input type="password" id="Rpassword" name="password" placeholder="Password" required>
 				<input type="checkbox" id="Rtotp" name="totp" required> enable 2fa?
-				<button id="button" onclick="register();">Register</button>
-				<button onclick="change('login');">Login instead?</button>
+				<button id="Rbutton" onclick="register();">Register</button>
+				<button id="Rchange" onclick="change('login');">Login instead?</button>
 			</div>
 			<div class="form" id="verify-totp" style="display: none;">
 				<p id="Tsecret"></p>

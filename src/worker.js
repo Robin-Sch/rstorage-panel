@@ -6,7 +6,7 @@ const { randomBytes, createCipheriv, createDecipheriv } = require('crypto');
 const FormData = require('form-data');
 const { Agent } = require('https');
 
-const db = require('./sql.js');
+const { db } = require('./sql.js');
 const { bufferToStream, getKey } = require('./utils.js');
 
 const tempDir = join(__dirname, '../', 'files');

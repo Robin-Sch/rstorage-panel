@@ -22,8 +22,8 @@
                 <th><input type="email" id="email" name="email" placeholder="email" value="<%=details.email%>" required></th>
                 <th><input type="password" id="password" placeholder="new password (empty = old one)"></input></th>
                 <th><input type="number" id="permissions" name="permissions" placeholder="permissions" value="<%=details.permissions%>" required></th>
-                <th><button id="button" onclick="userEdit('<%=details.id%>');">Save</button></th>
-				<th><button id="button" onclick="userDelete('<%=details.id%>');">Delete</button></th>
+                <th><button id="edit-user" onclick="userEdit('<%=details.id%>');">Save</button></th>
+				<th><button id="delete-user" onclick="userDelete('<%=details.id%>');">Delete</button></th>
             </tr>
             <tr>
             </tr>

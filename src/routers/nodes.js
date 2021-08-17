@@ -2,7 +2,7 @@ const { Router } = require('express');
 const { v4: uuidv4 } = require('uuid');
 
 const { INVALID_BODY, INVALID_NODE, NO_PERMISSIONS, SUCCESS } = require('../../responses.json');
-const db = require('../sql.js');
+const { db } = require('../sql.js');
 const { connectToNode } = require('../utils.js');
 
 const router = Router();
@@ -39,7 +39,7 @@ router
 		const node = await db.prepare('SELECT * FROM nodes WHERE id = ?;').get([req.params.id]);
 		if (!node) return res.status(403).json({ message: INVALID_NODE, success: false });
 
-		await db.prepare('UPDATE nodes SET ip = ?, port = ?, ca = ? WHERE id = ?').run([ip, port, req.params.id, ca]);
+		await db.prepare('UPDATE nodes SET ip = ?, port = ?, ca = ? WHERE id = ?').run([ip, port, ca, req.params.id]);
 
 		return res.status(200).json({ message: SUCCESS, success: true });
 	})

@@ -6,7 +6,7 @@ const { randomBytes } = require('crypto');
 const { generate } = require('randomstring');
 const { Agent } = require('https');
 
-const db = require('./sql.js');
+const { db } = require('./sql.js');
 const { SUCCESS, PROBLEMS_CONNECTING_NODE } = require('../responses.json');
 
 const cleanPath = (path) => {
@@ -176,6 +176,20 @@ const getKey = () => {
 	return key;
 };
 
+const reset = () => {
+	db.prepare('DELETE FROM users;').run();
+	db.prepare('DELETE FROM files;').run();
+	db.prepare('DELETE FROM parts;').run();
+	db.prepare('DELETE FROM nodes;').run();
+
+	db.prepare('DROP TABLE users;').run();
+	db.prepare('DROP TABLE files;').run();
+	db.prepare('DROP TABLE parts;').run();
+	db.prepare('DROP TABLE nodes;').run();
+	const { init } = require('./sql.js');
+	return init();
+};
+
 module.exports = {
 	cleanPath,
 	connectToNode,
@@ -185,4 +199,5 @@ module.exports = {
 	bufferToStream,
 	getPanelKey,
 	getKey,
+	reset,
 };

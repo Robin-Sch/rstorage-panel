@@ -1,7 +1,7 @@
 const { Router } = require('express');
 
 const { cleanPath } = require('../utils.js');
-const db = require('../sql.js');
+const { db } = require('../sql.js');
 
 const router = Router();
 

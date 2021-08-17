@@ -16,11 +16,11 @@
             <input type="file" name="upload" />
         </form> -->
 
-        <button onclick="fileUpload();">upload</button>
+        <button id="upload-file" onclick="fileUpload();">upload</button>
         <input id="file" type="file" name="upload"/>
         <span id="percentage-upload"></span><br>
 
-        <button onclick="dirCreate();">Create directory</button>
+        <button id="create-directory" onclick="dirCreate();">Create directory</button>
         <input id="createDirectory" type="text" value="<%=path%>">
 
         <table>
@@ -40,8 +40,8 @@
             <%files.forEach(file => { %>
                 <tr>
                     <td><%=file.name%></td>
-                    <th><button onclick="fileDelete('<%=path%>', '<%=file.name%>');">Delete</button></th>
-                    <th><button onclick="fileDownload('<%=path%>', '<%=file.name%>');">Download</button></th>
+                    <th><button class="delete-file" onclick="fileDelete('<%=path%>', '<%=file.name%>');">Delete</button></th>
+                    <th><button class="download-file" onclick="fileDownload('<%=path%>', '<%=file.name%>');">Download</button></th>
                 </tr>
             <% }); %>
         </table>
