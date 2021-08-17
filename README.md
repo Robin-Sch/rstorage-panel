@@ -95,6 +95,7 @@ Please make sure to update tests as appropriate.
 * connecting node to panel
 	* [x] generating key pair on both panel and node
 	* [x] connect using the node's public key
+	* [ ] self-signed certs?
 	* [x] editing a node's details
 	* [x] deleting a node's details
 * storing files

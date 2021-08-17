@@ -1,6 +1,7 @@
 const { existsSync, readFileSync } = require('fs');
 const { join } = require('path');
 const fetch = require('node-fetch');
+const { Readable } = require('stream');
 
 const { pack, unpack } = require('./crypt.js');
 const db = require('./sql.js');
@@ -147,10 +148,15 @@ const permissionNumberToArray = (number) => {
 	if (number == 0) return [];
 };
 
+const bufferToStream = (buffer) => {
+	return Readable.from(buffer);
+};
+
 module.exports = {
 	cleanPath,
 	connectToNode,
 	getNodes,
 	getUsers,
 	getPermissions,
+	bufferToStream,
 };

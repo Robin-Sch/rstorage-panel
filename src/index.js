@@ -48,7 +48,6 @@ const panel_port = PANEL_PORT || 3000;
 
 if (!existsSync(join(__dirname, '../', 'keys'))) mkdirSync(join(__dirname, '../', 'keys'));
 if (!existsSync(join(__dirname, '../', 'files'))) mkdirSync(join(__dirname, '../', 'files'));
-const tempDir = join(__dirname, '../', 'files');
 let SERVER_PRIVATE_KEY = existsSync(join(__dirname, '../', 'keys/rsa_key')) ? readFileSync(join(__dirname, '../', 'keys/rsa_key'), 'utf8') : null;
 let SERVER_PUBLIC_KEY = existsSync(join(__dirname, '../', 'keys/rsa_key.pub')) ? readFileSync(join(__dirname, '../', 'keys/rsa_key.pub'), 'utf8') : null;
 
@@ -128,11 +127,9 @@ io.on('connection', (socket) => {
 			const dataForThisLoop = rest == 0 ? received : received.slice(0, -rest);
 			received = rest == 0 ? Buffer.from('') : received.slice(-rest);
 
-			await writeFileSync(`${tempDir}/plain_${partID}`, dataForThisLoop, 'binary');
-
 			await socket.nsp.to(userID).emit('message', `[upload] ${path}${name} encrypting (${curloop + 1}/${loops})`);
 
-			const workerData = { task: 'upload', nodeForThisLoop, fileID, partID, curloop, loops, path, name };
+			const workerData = { task: 'upload', dataForThisLoop, nodeForThisLoop, fileID, partID, curloop, loops, path, name };
 
 			const worker = new Worker(join(__dirname, './worker.js'), { workerData });
 

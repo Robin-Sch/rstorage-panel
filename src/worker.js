@@ -7,6 +7,7 @@ const FormData = require('form-data');
 
 const db = require('./sql.js');
 const { unpack, pack } = require('./crypt.js');
+const { bufferToStream } = require('./utils.js');
 
 const tempDir = join(__dirname, '../', 'files');
 
@@ -17,11 +18,12 @@ if (!existsSync(join(__dirname, '../', 'keys/key'))) {
 }
 const key = readFileSync(join(__dirname, '../', 'keys/key'));
 
-const upload = async ({ nodeForThisLoop, fileID, partID, curloop, loops, path, name }) => {
+const upload = async ({ dataForThisLoop, nodeForThisLoop, fileID, partID, curloop, loops, path, name }) => {
 	const iv = crypto.randomBytes(16);
 	const cipher = crypto.createCipheriv('aes-256-ctr', key, iv);
 
-	const plainStream = createReadStream(`${tempDir}/plain_${partID}`);
+	// TODO: a Transform stream here maybe? I tried but I couldn't get it to work tho
+	const plainStream = bufferToStream(Buffer.from(dataForThisLoop));
 	const encryptedStream = createWriteStream(`${tempDir}/${partID}`);
 
 	plainStream.on('data', (data) => {
@@ -33,8 +35,6 @@ const upload = async ({ nodeForThisLoop, fileID, partID, curloop, loops, path, n
 		const buff = Buffer.from(cipher.final('binary'), 'binary');
 		encryptedStream.write(buff);
 		encryptedStream.end();
-
-		await unlinkSync(`${tempDir}/plain_${partID}`);
 
 		const formData = new FormData();
 		formData.append('file', createReadStream(`${tempDir}/${partID}`));
@@ -91,37 +91,25 @@ const download = async ({ parts, path, name }) => {
 
 		const encryptedbody = pack(node.publickey, body);
 
-		const encryptedWriteStream = createWriteStream(`${tempDir}/${partID}`);
-
 		fetch(`http://${node.ip}:${node.port}/files/download`, {
 			method: 'POST',
 			body: JSON.stringify(encryptedbody),
 			headers: { 'Content-Type': 'application/json' },
 		}).then(async res => {
-			if (res.status == 200) res.body.pipe(encryptedWriteStream);
-			else throw new Error(await res.text());
-		}).then(() => {
+			if (res.status !== 200) throw new Error((await res.json()).message);
 			const partBuffer = [];
-
-			const encryptedReadStream = createReadStream(`${tempDir}/${partID}`);
-			// const plainStream = createWriteStream(`${tempDir}/plain_${partID}`);
 
 			const iv = part.iv;
 			const cipher = crypto.createDecipheriv('aes-256-ctr', key, iv);
 
-			encryptedReadStream.on('data', (data) => {
+			res.body.on('data', (data) => {
 				const buff = Buffer.from(cipher.update(data), 'binary');
 				return partBuffer.push(buff);
-				// return plainStream.write();
 			});
 
-			encryptedReadStream.on('end', async () => {
+			res.body.on('end', async () => {
 				const buff = Buffer.from(cipher.final('binary'), 'binary');
-				// plainStream.write(buff);
-				// plainStream.end();
 				if(buff.length !== 0) partBuffer.push(buff);
-
-				await unlinkSync(`${tempDir}/${partID}`);
 
 				parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] ${path}${name} decrypting (${i + 1}/${parts.length})` });
 
