@@ -4,8 +4,9 @@
 	"description": "RStorage is an encrypted cloud file storage.",
 	"main": "src/index.js",
 	"scripts": {
-		"start": "node .",
-		"test": "node tests/start.js"
+		"start": "electron-rebuild && electron electron.js",
+		"server": "npm rebuild && node src/index.js",
+		"test": "npm rebuild && node tests/start.js"
 	},
 	"keywords": [],
 	"author": "Robin",
@@ -15,6 +16,8 @@
 		"better-sqlite3": "^7.4.3",
 		"dotenv": "^10.0.0",
 		"ejs": "^3.1.6",
+		"electron": "^13.2.1",
+		"electron-rebuild": "^3.1.1",
 		"express": "^4.17.1",
 		"express-session": "^1.17.2",
 		"form-data": "^4.0.0",

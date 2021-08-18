@@ -113,9 +113,7 @@ const download = async ({ parts, path, name }) => {
 				buffers[part.id] = partBuffer;
 				parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] ${path}${name} done (${curloop + 1}/${parts.length})` });
 
-				if (curloop == parts.length - 1) {
-					// console.log(Object.keys(buffers));
-					// sometimes this messes up, and doesn't download all parts?
+				if (Object.keys(buffers).length == parts.length) {
 					const buffer = [].concat(...Object.values(buffers));
 					const content = Buffer.concat(buffer);
 

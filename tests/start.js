@@ -1,3 +1,4 @@
+require('../src/index.js');
 const createTestCafe = require('testcafe');
 
 (async () => {

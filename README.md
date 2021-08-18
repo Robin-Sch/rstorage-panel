@@ -8,11 +8,9 @@ To not confuse things, `node`, or `Node` means `rstorage-node` or `RStorage Node
 
 ### Panel
 
-You have **one** panel, which is like the "master", server-side encryption and decryption happens on this one, so you probably want to host this at your own PC, or on a high secured server.
+You have **one** panel, which is like the "master". This is meant to be run on your PC, but if you really really really want, it can be run on a server too, but this is not recommended.
 
-The panel should have a lot of CPU power, as file encryption and decryption is done here.
-
-You can have one node, but also multiple nodes connected to one panel (this is recommended, the file will be spread over all the connected node(s) (See `PANEL_FORCE_SPREADING` below)).
+You can have one node, but also multiple nodes (this is recommended, the file will be spread over all the connected node(s) (See `PANEL_FORCE_SPREADING` below)).
 
 ### Node
 
@@ -36,23 +34,25 @@ Install [nodejs](https://nodejs.org/en/download/) (if not done already previousl
 ```
 git clone https://github.com/Robin-floss/rstorage-node
 cd rstorage-node
-npm i
+npm install
 ```
 
 Rename `.env.example` to `.env`, and fill in the environment variables.
 
 Run `npm start` to generate the SSL certificate.
 
-Copy the certificate printed in console, then start the node:
+Copy the certificate printed in console (you need to enter that later in the panel), then start the node:
 ```
 npm start
 ```
 
 ### Panel
+The panel is meant to be installed on your PC. But it *can* be installed on a server too. But that's not recommended.
+
 ```
 git clone https://github.com/Robin-floss/rstorage-panel
 cd rstorage-panel
-npm i
+npm install
 ```
 
 Rename `.env.example` to `.env`, and fill in the environment variables.
@@ -61,24 +61,16 @@ Rename `.env.example` to `.env`, and fill in the environment variables.
 npm start
 ```
 
-Go to your panel (`localhost:3000` by default) and login with email `admin` and password `admin`.
+Login with email `admin` and password `admin`.
 
 **MAKE SURE TO CHANGE DEFAULT PASSWORD** (and if you want, email can be changed too! **BUT DON'T CHANGE THE USERNAME**)!
 
 ## Usage
-### Node
-```
-npm start
-```
+To start the panel, or a node, use the `npm start` command.
 
-### Panel
-```
-npm start
-```
+Go to your panel, login, and paste the certificate (of your node's console) (and change the ip/port if you have changed that). If you want to add more nodes, repeat the same steps (installation => copying => pasting).
 
 Play around with `PANEL_MAX_SIZE` in the environment variables if you're getting out of memory crashes (set it lower until you get no crashes anymore while uploading a big file).
-
-Go to your panel (`localhost:3000` by default), login, and paste the certificate (of your node's console) (and change the ip/port if you have changed that). If you want to add more nodes, repeat the same steps (installation => copying => pasting).
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
@@ -115,7 +107,7 @@ Please make sure to update tests as appropriate.
 		* [ ] encrypting on client?
 	* [x] spread file contents randomly over all nodes
 * [x] tests
-* [ ] electron app instead of panel webpage?
+* [x] electron app
 
 ## Environment variables
 * PANEL_MAX_SIZE (Default: 8) (in megabytes)
