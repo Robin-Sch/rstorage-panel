@@ -14,9 +14,9 @@ test('Register', async (t) => {
 	await t.expect(RESPONSE.innerText).eql('Registering is disabled! If this is your first time, please check the readme!');
 
 	/*
-		await t.typeText(REGISTER.username, 'test');
-		await t.typeText(REGISTER.email, 'test@test.com');
-		await t.typeText(REGISTER.password, 'test');
+		await t.typeText(REGISTER.username, 'test', { paste: true, replace: true });
+		await t.typeText(REGISTER.email, 'test@test.com', { paste: true, replace: true });
+		await t.typeText(REGISTER.password, 'test', { paste: true, replace: true });
 		await t.click(REGISTER.button);
 	*/
 });

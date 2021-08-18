@@ -10,12 +10,11 @@ const admin = Role('http://localhost:3000', async t => {
 }, { preserveUrl: true });
 
 const addNode = Role('http://localhost:3000', async t => {
-	await t.typeText(LOGIN.email, 'admin');
-	await t.typeText(LOGIN.password, 'admin');
+	await t.typeText(LOGIN.email, 'admin', { paste: true, replace: true });
+	await t.typeText(LOGIN.password, 'admin', { paste: true, replace: true });
 	await t.click(LOGIN.button);
 
-	await t.selectText(NEWNODE.ca).pressKey('delete');
-	await t.typeText(NEWNODE.ca, CA);
+	await t.typeText(NEWNODE.ca, CA, { paste: true, replace: true });
 	await t.click(NEWNODE.button);
 }, { preserveUrl: true });
 

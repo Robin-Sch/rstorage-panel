@@ -110,11 +110,18 @@ const download = async ({ parts, path, name }) => {
 
 				parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] ${path}${name} decrypting (${curloop + 1}/${parts.length})` });
 
-				buffers[part.id] = partBuffer;
+				buffers[part.i] = partBuffer;
 				parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] ${path}${name} done (${curloop + 1}/${parts.length})` });
 
 				if (Object.keys(buffers).length == parts.length) {
-					const buffer = [].concat(...Object.values(buffers));
+					const ordered = Object.keys(buffers)
+						.sort()
+						.reduce((obj, keya) => {
+							obj[keya] = buffers[keya];
+							return obj;
+						}, {});
+
+					const buffer = [].concat(...Object.values(ordered));
 					const content = Buffer.concat(buffer);
 
 					parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] ${path}${name} decrypting everything` });

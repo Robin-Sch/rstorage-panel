@@ -9,7 +9,11 @@ socket.on('reload', () => {
 });
 
 socket.on('download', (data) => {
-	return prepareAndDownload(data.name, data.content);
+	const content = new TextDecoder('utf-8').decode(new Uint8Array(data.content));
+	const key = window.prompt(`Please enter the decryption key for ${data.name}.`);
+	if (!key) return;
+	const decrypted = CryptoJS.AES.decrypt(content, key).toString(CryptoJS.enc.Utf8);
+	return download(decrypted, data.name);
 });
 
 socket.on('error', (err) => {

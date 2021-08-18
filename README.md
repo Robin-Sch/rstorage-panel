@@ -104,10 +104,11 @@ Please make sure to update tests as appropriate.
 		* [x] encrypting on server
 		* [x] worker threads for encrypting
 		* [x] worker threads for decrypting
-		* [ ] encrypting on client?
+		* [x] encrypting on client
 	* [x] spread file contents randomly over all nodes
 * [x] tests
 * [x] electron app
+* [ ] guides on how to do things
 
 ## Environment variables
 * PANEL_MAX_SIZE (Default: 8) (in megabytes)

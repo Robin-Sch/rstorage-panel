@@ -10,6 +10,10 @@ fixture('Files')
 
 // eslint-disable-next-line no-undef
 test('Upload', async (t) => {
+	await t.setNativeDialogHandler((type) => {
+		if (type == 'prompt') return 'a';
+	});
+
 	await t.click(FILES.goto);
 
 	await t.setFilesToUpload(FILES.upload, ['./uploads/test.txt']);
@@ -20,6 +24,10 @@ test('Upload', async (t) => {
 
 // eslint-disable-next-line no-undef
 test('Download', async (t) => {
+	await t.setNativeDialogHandler((type) => {
+		if (type == 'prompt') return 'a';
+	});
+
 	await t.click(FILES.goto);
 
 	await t.click(FILES.downloadButton);

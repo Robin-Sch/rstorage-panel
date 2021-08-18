@@ -19,8 +19,7 @@ test('Edit', async (t) => {
 	await t.expect(EDITUSER.password.value).eql('');
 	await t.expect(EDITUSER.permissions.value).eql('777');
 
-	await t.selectText(EDITUSER.permissions).pressKey('delete');
-	await t.typeText(EDITUSER.permissions, '775');
+	await t.typeText(EDITUSER.permissions, '775', { paste: true, replace: true });
 
 	await t.click(EDITUSER.edit);
 

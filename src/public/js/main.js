@@ -109,21 +109,31 @@ const fileDelete = (path, name) => {
 };
 
 const fileUpload = () => {
-	const content = document.getElementById('file').files[0];
-	if (!content) return;
+	const file = document.getElementById('file').files[0];
+	if (!file) return;
+
+	const key = prompt('Please enter an encryption key (this is used to encrypt your file). If you forget this key, you can\'t download the file!');
+	if (!key) return alert('You need to enter a encryption key.');
 
 	document.getElementById('percentage-upload').innerHTML = '0%';
 
-	const name = content.name;
+	const name = file.name;
 
 	const params = new URLSearchParams(window.location.search)
-	const path  = params.get('path');
+	const path = params.get('path');
 
-	const stream = ss.createStream();
-	const blobStream = ss.createBlobReadStream(content);
+	const reader = new FileReader();
+	reader.readAsBinaryString(file);
+	reader.onload = (e) => {
+		const encrypted = CryptoJS.AES.encrypt(e.target.result, key);
+		const encryptedFile = new File([encrypted], name, { type: 'text/plain' });
 
-	ss(socket).emit('upload', stream, {size: content.size, path, name});
-	return blobStream.pipe(stream);
+		const stream = ss.createStream();
+		const blobStream = ss.createBlobReadStream(encryptedFile);
+
+		ss(socket).emit('upload', stream, { size: encryptedFile.size, path, name });
+		return blobStream.pipe(stream);
+	}
 }
 
 const fileDownload = (path, name) => {
@@ -170,14 +180,14 @@ const error = (errorBool, msg) => {
 	else document.getElementById('response').innerHTML = '';
 };
 
-const prepareAndDownload = (name, buffer) => {
-	const arr = new Uint8Array(buffer);
-	let str = '';
-	for (let i = 0; i < arr.length; i++) {
-		str += String.fromCharCode(arr[i]);
+// const prepareAndDownload = (name, buffer) => {
+// 	const arr = new Uint8Array(buffer);
+// 	let str = '';
+// 	for (let i = 0; i < arr.length; i++) {
+// 		str += String.fromCharCode(arr[i]);
 
-		if (i == arr.length - 1) {
-			return download(str, name);
-		}
-	}
-}
+// 		if (i == arr.length - 1) {
+// 			return download(str, name);
+// 		}
+// 	}
+// }
