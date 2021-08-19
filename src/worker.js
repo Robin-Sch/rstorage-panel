@@ -14,6 +14,8 @@ const tempDir = join(__dirname, '../', 'files');
 const key = getKey();
 
 const upload = async ({ dataForThisLoop, nodeForThisLoop, fileID, partID, curloop, loops, path, name }) => {
+	parentPort.postMessage({ toUser: true, event: 'message', 'data': `[upload] [server-side] ${path}${name} (${curloop + 1}/${loops}) encrypting` });
+
 	const iv = randomBytes(16);
 	const cipher = createCipheriv('aes-256-ctr', key, iv);
 
@@ -31,12 +33,16 @@ const upload = async ({ dataForThisLoop, nodeForThisLoop, fileID, partID, curloo
 		encryptedStream.write(buff);
 		encryptedStream.end();
 
+		parentPort.postMessage({ toUser: true, event: 'message', 'data': `[upload] [server-side] ${path}${name} (${curloop + 1}/${loops}) encrypted` });
+
 		const formData = new FormData();
 		formData.append('file', createReadStream(`${tempDir}/${partID}`));
 
 		const agent = new Agent({
 			ca: nodeForThisLoop.ca,
 		});
+
+		parentPort.postMessage({ toUser: true, event: 'message', 'data': `[upload] [server-side] ${path}${name} (${curloop + 1}/${loops}) uploading to node` });
 
 		fetch(`https://${nodeForThisLoop.ip}:${nodeForThisLoop.port}/files/upload`, {
 			method: 'POST',
@@ -46,22 +52,21 @@ const upload = async ({ dataForThisLoop, nodeForThisLoop, fileID, partID, curloo
 			.then(async json => {
 				if (!json.success) {
 					// TODO: delete all uploaded parts, and throw error?
-					return parentPort.postMessage({ toUser: true, event: 'message', 'data': `[upload] ${path}${name} failed (${curloop + 1}/${loops})` });
+					return parentPort.postMessage({ toUser: true, event: 'message', 'data': `[upload] [server-side] ${path}${name} (${curloop + 1}/${loops}) failed` });
 				} else {
 					await db.prepare('INSERT INTO parts (id, file, node, iv, i) VALUES (?,?,?,?,?);').run([partID, fileID, nodeForThisLoop.id, iv, curloop]);
 					await unlinkSync(`${tempDir}/${partID}`);
 
-					parentPort.postMessage({ toUser: true, event: 'message', 'data': `[upload] ${path}${name} done (${curloop + 1}/${loops})` });
+					parentPort.postMessage({ toUser: true, event: 'message', 'data': `[upload] [server-side] ${path}${name} (${curloop + 1}/${loops}) uploaded to node` });
 
 					if(curloop == loops - 1) {
-						parentPort.postMessage({ toUser: true, event: 'message', 'data': `[upload] ${path}${name} done everything` });
-						// io.sockets.emit('reload', 'files');
+						// TODO: io.sockets.emit('reload', 'files');
 						return parentPort.postMessage({ event: 'reload', 'data': 'files' });
 					}
 				}
 			}).catch(() => {
 				// TODO: delete all uploaded parts, and throw error?
-				return parentPort.postMessage({ toUser: true, event: 'message', 'data': `[upload] ${path}${name} failed (${curloop + 1}/${loops})` });
+				return parentPort.postMessage({ toUser: true, event: 'message', 'data': `[upload] [server-side] ${path}${name} (${curloop + 1}/${loops}) failed` });
 			});
 	});
 };
@@ -79,7 +84,7 @@ const download = async ({ parts, path, name }) => {
 			id: partID,
 		};
 
-		parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] ${path}${name} preparing (${curloop + 1}/${parts.length})` });
+		parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] [server-side] ${path}${name} (${curloop + 1}/${parts.length}) downloading from node` });
 
 		const node = await db.prepare('SELECT * FROM nodes WHERE id = ?;').get([part.node]);
 
@@ -94,6 +99,10 @@ const download = async ({ parts, path, name }) => {
 			agent,
 		}).then(async res => {
 			if (res.status !== 200) throw new Error((await res.json()).message);
+
+			parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] [server-side] ${path}${name} (${curloop + 1}/${parts.length}) downloaded from node` });
+			parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] [server-side] ${path}${name} (${curloop + 1}/${parts.length}) decrypting` });
+
 			const partBuffer = [];
 
 			const iv = part.iv;
@@ -108,10 +117,9 @@ const download = async ({ parts, path, name }) => {
 				const buff = Buffer.from(cipher.final('binary'), 'binary');
 				if(buff.length !== 0) partBuffer.push(buff);
 
-				parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] ${path}${name} decrypting (${curloop + 1}/${parts.length})` });
 
 				buffers[part.i] = partBuffer;
-				parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] ${path}${name} done (${curloop + 1}/${parts.length})` });
+				parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] [server-side] ${path}${name} (${curloop + 1}/${parts.length}) decrypted` });
 
 				if (Object.keys(buffers).length == parts.length) {
 					const ordered = Object.keys(buffers)
@@ -124,12 +132,11 @@ const download = async ({ parts, path, name }) => {
 					const buffer = [].concat(...Object.values(ordered));
 					const content = Buffer.concat(buffer);
 
-					parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] ${path}${name} decrypting everything` });
-					return parentPort.postMessage({ toUser: true, event: 'download', 'data': { content, name } });
+					return parentPort.postMessage({ toUser: true, event: 'download', 'data': { content, name, path } });
 				}
 			});
 		}).catch(() => {
-			return parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] ${path}${name} failed (${curloop + 1}/${parts.length})` });
+			return parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] [server-side] ${path}${name} (${curloop + 1}/${parts.length}) failed` });
 		});
 	}
 };

@@ -11,23 +11,31 @@
         <script src="/js/socket.js"></script>
 	</head>
     <body>
-        <button id="go-back" onclick="window.location.href = '/'">home</button><br>
+        <div id="main">
+            <button id="go-back" onclick="window.location.href = '/'">home</button><br>
         
-        <table>
-            <tr>
-                <th>Node IP</th>
-                <th>Port</th>
-                <th>Public Key</th>
-            </tr>
-            <tr>
-                <th><input type="text" id="ip" name="ip" placeholder="ip" value="<%=details.ip%>" required></th>
-                <th><input type="number" id="port" name="port" placeholder="port" value="<%=details.port%>" required></th>
-                <th><textarea type="test" id="ca" name="ca" required><%=details.ca%></textarea></th>
-                <th><button id="edit-node" onclick="nodeEdit('<%=details.id%>');">Save</button></th>
-				<th><button id="delete-node" onclick="nodeDelete('<%=details.id%>');">Delete</button></th>
-            </tr>
-        </table>
+            <table>
+                <tr>
+                    <th>Node IP</th>
+                    <th>Port</th>
+                    <th>Public Key</th>
+                </tr>
+                <tr>
+                    <th><input type="text" id="ip" name="ip" placeholder="ip" value="<%=details.ip%>" required></th>
+                    <th><input type="number" id="port" name="port" placeholder="port" value="<%=details.port%>" required></th>
+                    <th><textarea type="test" id="ca" name="ca" required><%=details.ca%></textarea></th>
+                    <th><button id="edit-node" onclick="nodeEdit('<%=details.id%>');">Save</button></th>
+                    <th><button id="delete-node" onclick="nodeDelete('<%=details.id%>');">Delete</button></th>
+                </tr>
+            </table>
+        </div>
+
+        <div id="decryption" style="display: none;">
+            <button id="decrypt">decrypt</button>
+            <input id="decryption-key" type="password" placeholder="decryption key">
+        </div>
 
         <p id="response" style="color: red"></p>
+        <p id="messages"></p>
     </body>
 </html>

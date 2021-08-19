@@ -68,6 +68,10 @@ io.on('connection', (socket) => {
 	const userID = socket.handshake.session.userID;
 	socket.join(userID);
 
+	socket.on('downloading', (value) => {
+		return socket.handshake.session.downloading = value;
+	});
+
 	ss(socket).on('upload', async (stream, data) => {
 		if (!data || !data.size || !data.path || !data.name) return;
 		if (!socket.handshake.session.permissions.file.includes(2)) return socket.nsp.to(userID).emit('error', NO_PERMISSIONS);
@@ -85,7 +89,6 @@ io.on('connection', (socket) => {
 		if (!nodes || nodes.length == 0) return socket.nsp.to(userID).emit('error', NO_NODES);
 
 		const fileID = uuidv4();
-
 		await db.prepare('INSERT INTO files (id, name, path) VALUES (?,?,?);').run([fileID, name, path]);
 
 		let loops = Math.ceil(size / 1000 / 1000 / PANEL_MAX_SIZE);
@@ -115,8 +118,6 @@ io.on('connection', (socket) => {
 			const dataForThisLoop = rest == 0 ? received : received.slice(0, -rest);
 			received = rest == 0 ? Buffer.from('') : received.slice(-rest);
 
-			await socket.nsp.to(userID).emit('message', `[upload] ${path}${name} encrypting (${curloop + 1}/${loops})`);
-
 			const workerData = { task: 'upload', dataForThisLoop, nodeForThisLoop, fileID, partID, curloop, loops, path, name };
 
 			const worker = new Worker(join(__dirname, './worker.js'), { workerData });
@@ -132,6 +133,9 @@ io.on('connection', (socket) => {
 	socket.on('download', async (data) => {
 		if (!data.path || !data.name) return;
 		if (!socket.handshake.session.permissions.file.includes(1)) return socket.nsp.to(userID).emit('error', NO_PERMISSIONS);
+
+		if (socket.handshake.session.downloading) return socket.nsp.to(userID).emit('error', 'You\'re already downloading a file!');
+		socket.handshake.session.downloading = true;
 
 		const path = cleanPath(data.path);
 		const name = data.name;
@@ -166,9 +170,11 @@ io.on('connection', (socket) => {
 		const parts = await db.prepare('SELECT * FROM parts WHERE file = ? ORDER BY i;').all(file.id);
 		if (!parts || parts.length == 0) {
 			await db.prepare('DELETE FROM files WHERE id = ?;').run([file.id]);
-			socket.nsp.to(userID).emit('message', `[delete] ${path}${name} done`);
+			socket.nsp.to(userID).emit('message', `[delete] [server-side] ${path}${name} deleted`);
 			return io.sockets.emit('reload', 'files');
 		}
+
+		const done = [];
 
 		for(let i = 0; i < parts.length; i++) {
 			const part = parts[i];
@@ -192,19 +198,20 @@ io.on('connection', (socket) => {
 				.then(async json => {
 					if (!json.success) {
 						// TODO: mark as deleted, and try again later?
-						return socket.nsp.to(userID).emit('message', `[delete] ${path}${name} failed (${i + 1}/${parts.length})`);
+						return socket.nsp.to(userID).emit('message', `[delete] [server-side] ${path}${name} (${i + 1}/${parts.length}) failed`);
 					} else {
 						await db.prepare('DELETE FROM parts WHERE id = ?;').run([part.id]);
+						done.push(part.id);
 
-						if (i == parts.length - 1) {
+						if (done.length == parts.length) {
 							await db.prepare('DELETE FROM files WHERE id = ?;').run([file.id]);
-							socket.nsp.to(userID).emit('message', `[delete] ${path}${name} done`);
+							socket.nsp.to(userID).emit('message', `[delete] [server-side] ${path}${name} deleted`);
 							return io.sockets.emit('reload', 'files');
 						}
 					}
 				}).catch(() => {
 					// TODO: mark as deleted, and try again later?
-					return socket.nsp.to(userID).emit('message', `[delete] ${path}${name} failed (${i + 1}/${parts.length})`);
+					return socket.nsp.to(userID).emit('message', `[delete] [server-side] ${path}${name} (${i + 1}/${parts.length}) failed`);
 				});
 		}
 	});

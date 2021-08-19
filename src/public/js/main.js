@@ -112,21 +112,24 @@ const fileUpload = () => {
 	const file = document.getElementById('file').files[0];
 	if (!file) return;
 
-	const key = prompt('Please enter an encryption key (this is used to encrypt your file). If you forget this key, you can\'t download the file!');
+	const key = document.getElementById('file-key').value;
 	if (!key) return alert('You need to enter a encryption key.');
-
-	document.getElementById('percentage-upload').innerHTML = '0%';
+	document.getElementById('file-key').value = '';
 
 	const name = file.name;
-
 	const params = new URLSearchParams(window.location.search)
 	const path = params.get('path');
+
+	document.getElementById('percentage-upload').innerHTML = '0%';
+	showMessage(`[upload] [client-side] ${path}${name} encrypting`);
 
 	const reader = new FileReader();
 	reader.readAsBinaryString(file);
 	reader.onload = (e) => {
 		const encrypted = CryptoJS.AES.encrypt(e.target.result, key);
 		const encryptedFile = new File([encrypted], name, { type: 'text/plain' });
+
+		showMessage(`[upload] [client-side] ${path}${name} encrypted`);
 
 		const stream = ss.createStream();
 		const blobStream = ss.createBlobReadStream(encryptedFile);
@@ -179,6 +182,10 @@ const error = (errorBool, msg) => {
 	if (errorBool) document.getElementById('response').innerHTML = msg;
 	else document.getElementById('response').innerHTML = '';
 };
+
+const showMessage = (msg) => {
+	return document.getElementById('messages').innerHTML = msg + '<br>' + document.getElementById('messages').innerHTML;
+}
 
 // const prepareAndDownload = (name, buffer) => {
 // 	const arr = new Uint8Array(buffer);

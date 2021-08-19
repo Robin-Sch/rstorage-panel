@@ -52,6 +52,8 @@ const FILES = {
 	directoryButton: Selector('#create-directory'),
 	downloadButton: Selector('.download-file'),
 	deleteButton: Selector('.delete-file'),
+	decrypt: Selector('#decryption-key'),
+	encrypt: Selector('#file-key'),
 };
 
 const RESPONSE = Selector('#response');

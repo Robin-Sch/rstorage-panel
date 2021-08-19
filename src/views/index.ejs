@@ -11,48 +11,57 @@
         <script src="/js/socket.js"></script>
 	</head>
     <body>
-        <button id="browse-files" onclick="window.location.href = '/files/view?path=/'">Browse files</button>
+        <div id="main">
+            <button id="browse-files" onclick="window.location.href = '/files/view?path=/'">Browse files</button>
         
-        <table id="nodes">
-            <tr>
-                <th>Node ID</th>
-                <th>Connected?</th>
-                <th>Edit</th>
-            </tr>
-            <% nodes.forEach(node => { %>
+            <table id="nodes">
                 <tr>
-                    <td><%=node.id%></td>
-                    <td class="connected"><%=node.connected%></td>
-                    <td><button class="edit-node" onclick="window.location.href = '/nodes/<%=node.id%>/edit'">Edit</button></td>
+                    <th>Node ID</th>
+                    <th>Connected?</th>
+                    <th>Edit</th>
                 </tr>
-            <% }); %>
-            <tr>
-                <th>
-                    <input type="text" id="ip" name="ip" placeholder="ip" value="127.0.0.1" required>
-                    <input type="number" id="port" name="port" placeholder="port" value="3001" required></th>
-                    <th><textarea type="test" id="ca" name="ca" required>-----BEGIN CERTIFICATE-----
-----END CERTIFICATE-----</textarea></th>
-                <th><button id="new-node" onclick="nodeCreate();">Add</button></th>
-            </tr>
-        </table>
-        <table id="users">
-            <tr>
-                <th>User ID</th>
-                <th>Username</th>
-                <th>Email</th>
-                <th>Permissions</th>
-                <th>Edit</th>
-            </tr>
-            <% users.forEach(user => { %>
+                <% nodes.forEach(node => { %>
+                    <tr>
+                        <td><%=node.id%></td>
+                        <td class="connected"><%=node.connected%></td>
+                        <td><button class="edit-node" onclick="window.location.href = '/nodes/<%=node.id%>/edit'">Edit</button></td>
+                    </tr>
+                <% }); %>
                 <tr>
-                    <td><%=user.id%></td>
-                    <td><%=user.username%></td>
-                    <td><%=user.email%></td>
-                    <td><%=user.permissions%></td>
-                    <td><button class="edit-user" onclick="window.location.href = '/accounts/<%=user.id%>/edit'">Edit</button></td>
+                    <th>
+                        <input type="text" id="ip" name="ip" placeholder="ip" value="127.0.0.1" required>
+                        <input type="number" id="port" name="port" placeholder="port" value="3001" required></th>
+                        <th><textarea type="test" id="ca" name="ca" required>-----BEGIN CERTIFICATE-----
+    ----END CERTIFICATE-----</textarea></th>
+                    <th><button id="new-node" onclick="nodeCreate();">Add</button></th>
                 </tr>
-            <% }); %>
-        </table>
+            </table>
+            <table id="users">
+                <tr>
+                    <th>User ID</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Permissions</th>
+                    <th>Edit</th>
+                </tr>
+                <% users.forEach(user => { %>
+                    <tr>
+                        <td><%=user.id%></td>
+                        <td><%=user.username%></td>
+                        <td><%=user.email%></td>
+                        <td><%=user.permissions%></td>
+                        <td><button class="edit-user" onclick="window.location.href = '/accounts/<%=user.id%>/edit'">Edit</button></td>
+                    </tr>
+                <% }); %>
+            </table>
+        </div>
+
+        <div id="decryption" style="display: none;">
+            <button id="decrypt">decrypt</button>
+            <input id="decryption-key" type="password" placeholder="decryption key">
+        </div>
+
         <p id="response" style="color: red"></p>
+        <p id="messages"></p>
     </body>
 </html>

@@ -1,7 +1,7 @@
 const socket = io();
 
 socket.on('message', (msg) => {
-	return document.getElementById('messages').innerHTML = msg + '<br>' + document.getElementById('messages').innerHTML;
+	return showMessage(msg);
 });
 
 socket.on('reload', () => {
@@ -9,11 +9,36 @@ socket.on('reload', () => {
 });
 
 socket.on('download', (data) => {
-	const content = new TextDecoder('utf-8').decode(new Uint8Array(data.content));
-	const key = window.prompt(`Please enter the decryption key for ${data.name}.`);
-	if (!key) return;
-	const decrypted = CryptoJS.AES.decrypt(content, key).toString(CryptoJS.enc.Utf8);
-	return download(decrypted, data.name);
+	document.getElementById('main').style = 'display: none;';
+	document.getElementById('decryption').style = 'display: block;';
+
+
+	showMessage(`[download] [client-side] ${data.path}${data.name} waiting for decryption key`);
+
+	const button = document.getElementById('decrypt');
+	button.onclick = () => {
+		showMessage(`[download] [client-side] ${data.path}${data.name} decrypting`);
+
+		const content = new TextDecoder('utf-8').decode(new Uint8Array(data.content));
+
+		const key = document.getElementById('decryption-key').value;
+		if (!key) return alert('No decryption key specified!');
+		document.getElementById('decryption-key').value = '';
+
+		try {
+			const decrypted = CryptoJS.AES.decrypt(content, key).toString(CryptoJS.enc.Utf8);
+			showMessage(`[download] [client-side] ${data.path}${data.name} decrypted`);
+
+			document.getElementById('main').style = 'display: block;';
+			document.getElementById('decryption').style = 'display: none;';
+	
+			socket.emit('downloading', false);
+	
+			return download(decrypted, data.name);
+		} catch (e) {
+			return showMessage(`[download] [client-side] ${data.path}${data.name} failed (wrong decryption key?)`);
+		}
+	};
 });
 
 socket.on('error', (err) => {

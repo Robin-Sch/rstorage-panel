@@ -1,11 +1,13 @@
 require('./src/index.js');
 const { app, BrowserWindow } = require('electron');
 
+const port = process.env.PANEL_PORT || 3000;
+
 let window;
 
 function createWindow() {
 	window = new BrowserWindow({ minWidth: 400, minHeight: 400 });
-	window.loadURL('http://localhost:3000');
+	window.loadURL(`http://localhost:${port}`);
 	window.on('closed', () => {
 		window = null;
 	});
