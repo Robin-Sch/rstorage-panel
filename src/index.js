@@ -177,11 +177,12 @@ io.on('connection', (socket) => {
 		for(let i = 0; i < parts.length; i++) {
 			const part = parts[i];
 
+			const node = await db.prepare('SELECT * FROM nodes WHERE id = ?;').get([part.node]);
+
 			const body = {
 				id: part.id,
+				key: node.ckey,
 			};
-
-			const node = await db.prepare('SELECT * FROM nodes WHERE id = ?;').get([part.node]);
 
 			const agent = new Agent({
 				ca: node.ca,

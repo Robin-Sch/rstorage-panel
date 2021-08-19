@@ -45,5 +45,5 @@ test('Delete', async (t) => {
 
 	await t.click(EDITNODE.delete);
 
-	await t.expect(RESPONSE.innerText).eql('');
+	await t.expect(RESPONSE.innerText).eql('There are problems connecting to the node, please try again!');
 });

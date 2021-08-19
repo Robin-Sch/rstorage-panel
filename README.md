@@ -93,6 +93,7 @@ Please make sure to update tests as appropriate.
 	* [x] self-signed certs?
 	* [x] editing a node's details
 	* [x] deleting a node's details
+	* [ ] limit by panel IP('s)
 * storing files
 	* browsing files (storing unencrypted)
 		* [x] viewing files
@@ -111,6 +112,7 @@ Please make sure to update tests as appropriate.
 * [x] tests
 * [x] electron app
 * [x] guides on how to do things
+* [ ] ratelimits
 
 ## Environment variables
 * PANEL_MAX_SIZE (Default: 8) (in megabytes)

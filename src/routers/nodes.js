@@ -1,7 +1,10 @@
 const { Router } = require('express');
 const { v4: uuidv4 } = require('uuid');
 const { generate } = require('randomstring');
-const { INVALID_BODY, INVALID_NODE, NO_PERMISSIONS, SUCCESS } = require('../../responses.json');
+const fetch = require('node-fetch');
+const { Agent } = require('https');
+
+const { PROBLEMS_CONNECTING_NODE, INVALID_BODY, INVALID_NODE, NO_PERMISSIONS, SUCCESS } = require('../../responses.json');
 const { db } = require('../sql.js');
 const { connectToNode } = require('../utils.js');
 
@@ -39,9 +42,26 @@ router
 		const node = await db.prepare('SELECT * FROM nodes WHERE id = ?;').get([req.params.id]);
 		if (!node) return res.status(403).json({ message: INVALID_NODE, success: false });
 
-		await db.prepare('UPDATE nodes SET ip = ?, port = ?, ca = ? WHERE id = ?').run([ip, port, ca, req.params.id]);
+		const body = {
+			key: node.ckey,
+		};
 
-		return res.status(200).json({ message: SUCCESS, success: true });
+		const agent = new Agent({
+			ca: node.ca,
+		});
+
+		return fetch(`https://${node.ip}:${node.port}/deinit`, {
+			method: 'POST',
+			body: JSON.stringify(body),
+			headers: { 'Content-Type': 'application/json' },
+			agent,
+		}).then(async () => {
+			await db.prepare('UPDATE nodes SET ip = ?, port = ?, ca = ? WHERE id = ?').run([ip, port, ca, req.params.id]);
+
+			return res.status(200).json({ message: SUCCESS, success: true });
+		}).catch(() => {
+			return res.status(500).json({ message: PROBLEMS_CONNECTING_NODE, success: false });
+		});
 	})
 	.post('/:id/delete', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
@@ -50,9 +70,26 @@ router
 		const node = await db.prepare('SELECT * FROM nodes WHERE id = ?;').get([req.params.id]);
 		if (!node) return res.status(403).json({ message: INVALID_NODE, success: false });
 
-		await db.prepare('DELETE FROM nodes WHERE id = ?;').run([req.params.id]);
+		const body = {
+			key: node.ckey,
+		};
 
-		return res.status(200).json({ message: SUCCESS, success: true });
+		const agent = new Agent({
+			ca: node.ca,
+		});
+
+		return fetch(`https://${node.ip}:${node.port}/deinit`, {
+			method: 'POST',
+			body: JSON.stringify(body),
+			headers: { 'Content-Type': 'application/json' },
+			agent,
+		}).then(async () => {
+			await db.prepare('DELETE FROM nodes WHERE id = ?;').run([req.params.id]);
+
+			return res.status(200).json({ message: SUCCESS, success: true });
+		}).catch(() => {
+			return res.status(500).json({ message: PROBLEMS_CONNECTING_NODE, success: false });
+		});
 	})
 	.post('/create', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');

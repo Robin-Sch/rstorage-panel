@@ -35,6 +35,7 @@ const upload = async ({ dataForThisLoop, nodeForThisLoop, fileID, partID, curloo
 
 		const formData = new FormData();
 		formData.append('file', createReadStream(`${tempDir}/${partID}`));
+		// TODO: make this work: formData.append('key', nodeForThisLoop.ckey);
 
 		const agent = new Agent({
 			ca: nodeForThisLoop.ca,
@@ -78,17 +79,18 @@ const download = async ({ parts, path, name }) => {
 
 		const partID = part.id;
 
+		const node = await db.prepare('SELECT * FROM nodes WHERE id = ?;').get([part.node]);
+
 		const body = {
 			id: partID,
+			key: node.ckey,
 		};
-
-		parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] [server-side] ${path}${name} (${curloop + 1}/${parts.length}) downloading from node` });
-
-		const node = await db.prepare('SELECT * FROM nodes WHERE id = ?;').get([part.node]);
 
 		const agent = new Agent({
 			ca: node.ca,
 		});
+
+		parentPort.postMessage({ toUser: true, event: 'message', 'data': `[download] [server-side] ${path}${name} (${curloop + 1}/${parts.length}) downloading from node` });
 
 		fetch(`https://${node.ip}:${node.port}/files/download`, {
 			method: 'POST',
