@@ -22,7 +22,7 @@ const init = () => {
 		}
 	})();
 
-	db.prepare('CREATE TABLE if not exists nodes (id TEXT, ip TEXT, port INTEGER, ca TEXT);').run();
+	db.prepare('CREATE TABLE if not exists nodes (id TEXT, ip TEXT, port INTEGER, ca TEXT, key TEXT, ckey TEXT);').run();
 	db.prepare('CREATE TABLE if not exists files (id TEXT, name TEXT, path TEXT);').run();
 	db.prepare('CREATE TABLE if not exists parts (id TEXT, file TEXT, node TEXT, iv TEXT, i INTEGER);').run();
 };

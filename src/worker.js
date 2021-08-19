@@ -7,17 +7,15 @@ const FormData = require('form-data');
 const { Agent } = require('https');
 
 const { db } = require('./sql.js');
-const { bufferToStream, getKey } = require('./utils.js');
+const { bufferToStream } = require('./utils.js');
 
 const tempDir = join(__dirname, '../', 'files');
-
-const key = getKey();
 
 const upload = async ({ dataForThisLoop, nodeForThisLoop, fileID, partID, curloop, loops, path, name }) => {
 	parentPort.postMessage({ toUser: true, event: 'message', 'data': `[upload] [server-side] ${path}${name} (${curloop + 1}/${loops}) encrypting` });
 
 	const iv = randomBytes(16);
-	const cipher = createCipheriv('aes-256-ctr', key, iv);
+	const cipher = createCipheriv('aes-256-ctr', nodeForThisLoop.key, iv);
 
 	// TODO: a Transform stream here maybe? I tried but I couldn't get it to work tho
 	const plainStream = bufferToStream(Buffer.from(dataForThisLoop));
@@ -106,7 +104,7 @@ const download = async ({ parts, path, name }) => {
 			const partBuffer = [];
 
 			const iv = part.iv;
-			const cipher = createDecipheriv('aes-256-ctr', key, iv);
+			const cipher = createDecipheriv('aes-256-ctr', node.key, iv);
 
 			res.body.on('data', (data) => {
 				const buff = Buffer.from(cipher.update(data), 'binary');

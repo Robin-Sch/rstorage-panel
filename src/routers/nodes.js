@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const { v4: uuidv4 } = require('uuid');
-
+const { generate } = require('randomstring');
 const { INVALID_BODY, INVALID_NODE, NO_PERMISSIONS, SUCCESS } = require('../../responses.json');
 const { db } = require('../sql.js');
 const { connectToNode } = require('../utils.js');
@@ -66,10 +66,13 @@ router
 
 		if (!ip || !port || !ca) return res.status(400).json({ message: INVALID_BODY, success: false });
 
-		const status = await connectToNode(ip, port, ca);
+		const key = generate(32);
+		const ckey = generate(1280);
+
+		const status = await connectToNode(ip, port, ca, ckey);
 		if (status.success == false) return res.status(400).json(status);
 
-		await db.prepare('INSERT INTO nodes (id, ip, port, ca) VALUES (?,?,?,?);').run([uuidv4(), ip, port, ca]);
+		await db.prepare('INSERT INTO nodes (id, ip, port, ca, key, ckey) VALUES (?,?,?,?,?,?);').run([uuidv4(), ip, port, ca, key, ckey]);
 		return res.status(200).json({ message: SUCCESS, success: true });
 	});
 

@@ -1,9 +1,5 @@
-const { existsSync, mkdirSync, readFileSync, writeFileSync } = require('fs');
-const { join } = require('path');
 const fetch = require('node-fetch');
 const { Readable } = require('stream');
-const { randomBytes } = require('crypto');
-const { generate } = require('randomstring');
 const { Agent } = require('https');
 
 const { db } = require('./sql.js');
@@ -17,11 +13,11 @@ const cleanPath = (path) => {
 	return path;
 };
 
-const connectToNode = async (ip, port, ca) => {
+const connectToNode = async (ip, port, ca, ckey) => {
 	try {
 
 		const body = {
-			key: getPanelKey(),
+			key: ckey,
 		};
 
 		const agent = new Agent({
@@ -43,7 +39,7 @@ const connectToNode = async (ip, port, ca) => {
 	}
 };
 
-const getNodes = async (skipNotConnected, skipConnectionDetails) => {
+const getNodes = async (skipNotConnected, skipConnectionDetails, skipEncryptionKey) => {
 	const all = await db.prepare('SELECT * FROM nodes;').all();
 	const nodes = [];
 
@@ -51,7 +47,7 @@ const getNodes = async (skipNotConnected, skipConnectionDetails) => {
 
 	for (let i = 0; i < all.length; i++) {
 		const node = all[i];
-		const status = await connectToNode(node.ip, node.port, node.ca);
+		const status = await connectToNode(node.ip, node.port, node.ca, node.ckey);
 
 		if (skipNotConnected && !status.success) {
 			if (i == all.length - 1) {
@@ -70,6 +66,11 @@ const getNodes = async (skipNotConnected, skipConnectionDetails) => {
 			obj.ip = node.ip;
 			obj.port = node.port;
 			obj.ca = node.ca;
+			obj.ckey = node.ckey;
+		}
+
+		if (!skipEncryptionKey) {
+			obj.key = node.key;
 		}
 
 		nodes.push(obj);
@@ -156,26 +157,6 @@ const bufferToStream = (buffer) => {
 	return Readable.from(buffer);
 };
 
-const getPanelKey = () => {
-	if (!existsSync(join(__dirname, '../', 'keys'))) mkdirSync(join(__dirname, '../', 'keys'));
-	let panelKey = existsSync(join(__dirname, '../', 'keys/panel')) ? readFileSync(join(__dirname, '../', 'keys/panel'), 'utf8') : null;
-	if (!panelKey) {
-		panelKey = generate();
-		writeFileSync(join(__dirname, '../', 'keys/panel'), panelKey);
-	}
-	return panelKey;
-};
-
-const getKey = () => {
-	if (!existsSync(join(__dirname, '../', 'keys'))) mkdirSync(join(__dirname, '../', 'keys'));
-	let key = existsSync(join(__dirname, '../', 'keys/key')) ? readFileSync(join(__dirname, '../', 'keys/key')) : null;
-	if (!key) {
-		key = randomBytes(32);
-		writeFileSync(join(__dirname, '../', 'keys/key'), key);
-	}
-	return key;
-};
-
 const reset = () => {
 	db.prepare('DELETE FROM users;').run();
 	db.prepare('DELETE FROM files;').run();
@@ -197,7 +178,5 @@ module.exports = {
 	getUsers,
 	getPermissions,
 	bufferToStream,
-	getPanelKey,
-	getKey,
 	reset,
 };
