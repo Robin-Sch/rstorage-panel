@@ -1,4 +1,5 @@
 const nodeCreate = () => {
+	error(false);
 	const ip = document.getElementById('ip').value;
 	const port = document.getElementById('port').value;
 	const ca = document.getElementById('ca').value;
@@ -25,7 +26,10 @@ const nodeCreate = () => {
 		});
 };
 
+let forceNodeEdit = false;
+
 const nodeEdit = (id) => {
+	error(false);
 	const ip = document.getElementById('ip').value;
 	const port = document.getElementById('port').value;
 	const ca = document.getElementById('ca').value;
@@ -37,6 +41,7 @@ const nodeEdit = (id) => {
 		ip,
 		port,
 		ca,
+		force: forceNodeEdit,
 	};
 
 	fetch(`/nodes/${id}/edit`, {
@@ -45,27 +50,49 @@ const nodeEdit = (id) => {
 		headers: { 'Content-Type': 'application/json' },
 	}).then(res => res.json())
 		.then(json => {
-			if (!json.success) return error(true, json.message);
+			if (!json.success) {
+				forceNodeEdit = true;
+				document.getElementById('edit-node').innerText = 'Force save';
+				return error(true, json.message);
+			}
 			else return window.location.href = '/';
 		}).catch(() => {
+			forceNodeEdit = true;
+			document.getElementById('edit-node').innerText = 'Force save';
 			return error(true, 'There are problems connecting to the server!');
 		});
 };
 
+let forceNodeDelete = false;
+
 const nodeDelete = (id) => {
+	error(false);
+
+	const body = {
+		force: forceNodeDelete,
+	};
+
 	fetch(`/nodes/${id}/delete`, {
 		method: 'POST',
+		body: JSON.stringify(body),
 		headers: { 'Content-Type': 'application/json' },
 	}).then(res => res.json())
 		.then(json => {
-			if (!json.success) return error(true, json.message);
+			if (!json.success) {
+				forceNodeDelete = true;
+				document.getElementById('delete-node').innerText = 'Force delete';
+				return error(true, json.message);
+			}
 			else return window.location.href = '/';
 		}).catch(() => {
+			forceNodeDelete = true;
+			document.getElementById('delete-node').innerText = 'Force delete';
 			return error(true, 'There are problems connecting to the server!');
 		});
 };
 
 const userEdit = (id) => {
+	error(false);
 	const username = document.getElementById('username').value;
 	const email = document.getElementById('email').value;
 	const password = document.getElementById('password').value;
@@ -92,6 +119,7 @@ const userEdit = (id) => {
 }
 
 const userDelete = (id) => {
+	error(false);
 	fetch(`/accounts/${id}/delete`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
@@ -105,10 +133,12 @@ const userDelete = (id) => {
 }
 
 const fileDelete = (path, name) => {
+	error(false);
 	return socket.emit('delete', { path, name });
 };
 
 const fileUpload = () => {
+	error(false);
 	const file = document.getElementById('file').files[0];
 	if (!file) return;
 
@@ -140,10 +170,12 @@ const fileUpload = () => {
 }
 
 const fileDownload = (path, name) => {
+	error(false);
 	return socket.emit('download', { path, name });
 };
 
 const dirCreate = () => {
+	error(false);
 	const name = document.getElementById('createDirectory').value || '/';
 
 	return window.location = window.location.pathname + replaceQueryParam('path', name, window.location.search);

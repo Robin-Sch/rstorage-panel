@@ -7,5 +7,6 @@
 	"NO_NODES": "There are no nodes connected!",
 	"PROBLEMS_CONNECTING_NODE": "There are problems connecting to the node, please try again!",
 	"NO_PERMISSIONS": "You don't have enough permissions to do that action!",
+	"REGISTERING_DISABLED": "Registering is disabled! If this is your first time, please check the readme!",
 	"SUCCESS": "Success!"
 }

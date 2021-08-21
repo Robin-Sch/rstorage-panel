@@ -35,6 +35,7 @@ router
 			ip,
 			port,
 			ca,
+			force,
 		} = req.body;
 
 		if (!ip || !port || !ca) return res.status(400).json({ message: INVALID_BODY, success: false });
@@ -50,22 +51,42 @@ router
 			ca: node.ca,
 		});
 
+		const controller = new AbortController();
+		const signal = controller.signal;
+		setTimeout(() => {
+			controller.abort();
+		}, 5000);
+
+		const status = await connectToNode(ip, port, ca, node.ckey);
+		if (!status.success && !force) {
+			return res.status(500).json({ message: PROBLEMS_CONNECTING_NODE + ' (with new config)', success: false });
+		}
+
 		return fetch(`https://${node.ip}:${node.port}/deinit`, {
 			method: 'POST',
 			body: JSON.stringify(body),
 			headers: { 'Content-Type': 'application/json' },
 			agent,
+			signal,
 		}).then(async () => {
 			await db.prepare('UPDATE nodes SET ip = ?, port = ?, ca = ? WHERE id = ?').run([ip, port, ca, req.params.id]);
 
 			return res.status(200).json({ message: SUCCESS, success: true });
-		}).catch(() => {
-			return res.status(500).json({ message: PROBLEMS_CONNECTING_NODE, success: false });
+		}).catch(async () => {
+			if (force) {
+				await db.prepare('UPDATE nodes SET ip = ?, port = ?, ca = ? WHERE id = ?').run([ip, port, ca, req.params.id]);
+				return res.status(200).json({ message: SUCCESS, success: true });
+			}
+			return res.status(500).json({ message: PROBLEMS_CONNECTING_NODE + ' (with old config)', success: false });
 		});
 	})
 	.post('/:id/delete', async (req, res) => {
 		if (!req.session.loggedin) return res.redirect('/login');
 		if (!req.session.permissions.node.includes(4)) return res.status(403).json({ message: NO_PERMISSIONS, success: false });
+
+		const {
+			force,
+		} = req.body;
 
 		const node = await db.prepare('SELECT * FROM nodes WHERE id = ?;').get([req.params.id]);
 		if (!node) return res.status(403).json({ message: INVALID_NODE, success: false });
@@ -78,16 +99,28 @@ router
 			ca: node.ca,
 		});
 
+		const controller = new AbortController();
+		const signal = controller.signal;
+		setTimeout(() => {
+			controller.abort();
+		}, 5000);
+
 		return fetch(`https://${node.ip}:${node.port}/deinit`, {
 			method: 'POST',
 			body: JSON.stringify(body),
 			headers: { 'Content-Type': 'application/json' },
 			agent,
+			signal,
 		}).then(async () => {
 			await db.prepare('DELETE FROM nodes WHERE id = ?;').run([req.params.id]);
 
 			return res.status(200).json({ message: SUCCESS, success: true });
-		}).catch(() => {
+		}).catch(async () => {
+			if (force) {
+				await db.prepare('DELETE FROM nodes WHERE id = ?;').run([req.params.id]);
+
+				return res.status(200).json({ message: SUCCESS, success: true });
+			}
 			return res.status(500).json({ message: PROBLEMS_CONNECTING_NODE, success: false });
 		});
 	})

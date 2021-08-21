@@ -17,13 +17,13 @@ socket.on('download', (data) => {
 
 	const button = document.getElementById('decrypt');
 	button.onclick = () => {
+		const key = document.getElementById('decryption-key').value;
+		if (!key) return alert('You need to enter a decryption key.');
+		document.getElementById('decryption-key').value = '';
+
 		showMessage(`[download] [client-side] ${data.path}${data.name} decrypting`);
 
 		const content = new TextDecoder('utf-8').decode(new Uint8Array(data.content));
-
-		const key = document.getElementById('decryption-key').value;
-		if (!key) return alert('No decryption key specified!');
-		document.getElementById('decryption-key').value = '';
 
 		try {
 			const decrypted = CryptoJS.AES.decrypt(content, key).toString(CryptoJS.enc.Utf8);

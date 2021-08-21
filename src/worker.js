@@ -35,7 +35,7 @@ const upload = async ({ dataForThisLoop, nodeForThisLoop, fileID, partID, curloo
 
 		const formData = new FormData();
 		formData.append('file', createReadStream(`${tempDir}/${partID}`));
-		// TODO: make this work: formData.append('key', nodeForThisLoop.ckey);
+		formData.append('key', nodeForThisLoop.ckey);
 
 		const agent = new Agent({
 			ca: nodeForThisLoop.ca,

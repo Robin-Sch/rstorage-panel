@@ -53,6 +53,7 @@ const FILES = {
 	downloadButton: Selector('.download-file'),
 	deleteButton: Selector('.delete-file'),
 	decrypt: Selector('#decryption-key'),
+	decryptButton: Selector('#decrypt'),
 	encrypt: Selector('#file-key'),
 };
 

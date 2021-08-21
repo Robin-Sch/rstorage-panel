@@ -5,7 +5,7 @@ const { v4: uuidv4 } = require('uuid');
 
 const { db } = require('../sql.js');
 const { getPermissions } = require('../utils.js');
-const { INVALID_USER, NO_PERMISSIONS, INVALID_BODY, SUCCESS } = require('../../responses.json');
+const { INVALID_USER, NO_PERMISSIONS, INVALID_BODY, REGISTERING_DISABLED, SUCCESS } = require('../../responses.json');
 
 const {
 	PANEL_DISABLE_REGISTER,
@@ -121,7 +121,7 @@ router
 		}
 	})
 	.post('/register', async (req, res) => {
-		if (DISABLE_REGISTER) return res.json({ message: 'Registering is disabled! If this is your first time, please check the readme!', success: false });
+		if (DISABLE_REGISTER) return res.json({ message: REGISTERING_DISABLED, success: false });
 
 		const {
 			email,

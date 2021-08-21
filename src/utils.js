@@ -24,11 +24,18 @@ const connectToNode = async (ip, port, ca, ckey) => {
 			ca,
 		});
 
+		const controller = new AbortController();
+		const signal = controller.signal;
+		setTimeout(() => {
+			controller.abort();
+		}, 5000);
+
 		const res = await fetch(`https://${ip}:${port}/init`, {
 			method: 'POST',
 			body: JSON.stringify(body),
 			headers: { 'Content-Type': 'application/json' },
 			agent,
+			signal,
 		});
 		const json = await res.json();
 
@@ -158,23 +165,12 @@ const bufferToStream = (buffer) => {
 };
 
 const reset = async () => {
-	const nodes = await getNodes(true, false, true);
-	if (nodes.length == 0) {
-		db.prepare('DELETE FROM users;').run();
-		db.prepare('DELETE FROM files;').run();
-		db.prepare('DELETE FROM parts;').run();
-		db.prepare('DELETE FROM nodes;').run();
+	let nodes = await getNodes(true, false, true);
+	if (nodes.length == 0) nodes = [null];
+	for (let i = 0; i < nodes.length; i++) {
+		const node = nodes[i];
 
-		db.prepare('DROP TABLE users;').run();
-		db.prepare('DROP TABLE files;').run();
-		db.prepare('DROP TABLE parts;').run();
-		db.prepare('DROP TABLE nodes;').run();
-		const { init } = require('./sql.js');
-		return init();
-	} else {
-		for (let i = 0; i < nodes.length; i++) {
-			const node = nodes[i];
-
+		if (node) {
 			const body = {
 				key: node.ckey,
 			};
@@ -189,20 +185,20 @@ const reset = async () => {
 				headers: { 'Content-Type': 'application/json' },
 				agent,
 			});
+		}
 
-			if (i == nodes.length - 1) {
-				db.prepare('DELETE FROM users;').run();
-				db.prepare('DELETE FROM files;').run();
-				db.prepare('DELETE FROM parts;').run();
-				db.prepare('DELETE FROM nodes;').run();
+		if (i == nodes.length - 1) {
+			db.prepare('DELETE FROM users;').run();
+			db.prepare('DELETE FROM files;').run();
+			db.prepare('DELETE FROM parts;').run();
+			db.prepare('DELETE FROM nodes;').run();
 
-				db.prepare('DROP TABLE users;').run();
-				db.prepare('DROP TABLE files;').run();
-				db.prepare('DROP TABLE parts;').run();
-				db.prepare('DROP TABLE nodes;').run();
-				const { init } = require('./sql.js');
-				return init();
-			}
+			db.prepare('DROP TABLE users;').run();
+			db.prepare('DROP TABLE files;').run();
+			db.prepare('DROP TABLE parts;').run();
+			db.prepare('DROP TABLE nodes;').run();
+			const { init } = require('./sql.js');
+			return init();
 		}
 	}
 };

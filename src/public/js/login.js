@@ -35,7 +35,7 @@ const register = async () => {
 	const password = document.getElementById('Rpassword').value;
 	const totp = document.getElementById('Rtotp').checked;
 
-	const valid = validate(username, password, email);
+	const valid = validate(email, password, username);
 	if (!valid.success) return alert(valid.message);
 
 	const body = {
@@ -97,13 +97,13 @@ const verify = () => {
 		});
 }
 
-const validate = (username, password, email) => {
-	if (!username) {
-		return { success: false, message: 'Missing your username!' };
-	} else if (username.length < 1 || username.length > 32) {
-		return { success: false, message: 'Your username can\'t be longer than 32 characters' };
+const validate = (email, password, username) => {
+	if (!email) {
+		return { success: false, message: 'Missing your email!' };
 	} else if (!password) {
 		return { success: false, message: 'Missing your password!' };
+	} else if (username && (username.length < 1 || username.length > 32)) {
+		return { success: false, message: 'Your username can\'t be longer than 32 characters' };
 	} else {
 		return { success: true };
 	}
