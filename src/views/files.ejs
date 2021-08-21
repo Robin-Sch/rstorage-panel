@@ -15,31 +15,44 @@
         <div id="main">
             <button id="go-back" onclick="window.location.href = '/'">home</button><br>
 
-            <button id="upload-file" onclick="fileUpload();">upload</button>
-            <input id="file-key" type="password" placeholder="encryption key">
-            <input id="file" type="file" name="upload"/>
-    
-            <span id="percentage-upload"></span><br>
-    
-            <button id="create-directory" onclick="dirCreate();">Create directory</button>
-            <input id="createDirectory" type="text" value="<%=path%>">
-    
             <table>
                 <tr>
+                    <td><img src="/img/file_upload.svg" width="25" height="25"></td>
+                    <td><input id="file-key" type="password" placeholder="encryption key"></td>
+                    <td><input id="file" type="file" name="upload"/></td>
+                    <td><button id="upload-file" onclick="fileUpload();">upload<span id="percentage-upload"></span><br></button></td>
+                </tr>
+                <tr>
+                    <td><img src="/img/folder_create.svg" width="25" height="25"></td>
+                    <td><input id="createDirectory" type="text" value="<%=path%>"></td>
+                    <td><button id="create-directory" onclick="dirCreate();">Create directory</button></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <th width="25"></th>
                     <th>Name</th>
+                    <th>Delete</th>
+                    <th>Download</th>
                 </tr>
                 <% if (path !== '/') { %>
                     <tr>
+                        <td><img src="/img/folder.svg" width="25" height="25"></td>
                         <td><a onclick="moveoneback();">../</a></td>
+                        <td><button disabled>Delete</button></td>
+                        <td><button disabled>Download</button></td>
                     </tr>
                 <% } %>
                 <%directories.forEach(directory => {%>
                     <tr>
+                        <td><img src="/img/folder.svg" width="25" height="25"></td>
                         <td><a href="?path=<%=directory.path%>"><%=directory.path%></a></td>
+                        <td><button disabled>Delete</button></td>
+                        <td><button disabled>Download</button></td>
                     </tr>
                 <%})%>
                 <%files.forEach(file => { %>
                     <tr>
+                        <td><img src="/img/file.svg" width="25" height="25"></td>
                         <td><%=file.name%></td>
                         <th><button class="delete-file" onclick="fileDelete('<%=path%>', '<%=file.name%>');">Delete</button></th>
                         <th><button class="download-file" onclick="fileDownload('<%=path%>', '<%=file.name%>');">Download</button></th>
